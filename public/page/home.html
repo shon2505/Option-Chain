@@ -84,7 +84,6 @@
             return td;
         }
         function formatCellContent(content) {
-
             if (typeof content !== 'string') {
                 content = String(content);
             }
@@ -102,10 +101,7 @@
             tr.appendChild(createCell(formatCellContent(ce.chng || '-'), formatCellContent(ce.chng).startsWith('-') ? 'negative' : 'positive'));
             tr.appendChild(createCell(ce.strike || '-'));
 
-            // Empty cell for separator
-            tr.appendChild(createCell(''));
 
-            // Create cells for Put (PE)
             tr.appendChild(createCell(pe.oi || '-'));
             tr.appendChild(createCell(formatCellContent(pe.chng_in_oi || '-'), formatCellContent(pe.chng_in_oi).startsWith('-') ? 'negative' : 'positive'));
             tr.appendChild(createCell(pe.volume || '-'));

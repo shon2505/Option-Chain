@@ -16,18 +16,19 @@ const headers = {
 app.use(express.static('public'));
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Serve the home page
+
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'page', 'home.html'));
 });
 
-// API endpoint for option chain data
+
 app.get('/api/v1/optionChain', async (req, res) => {
+
     try {
         const response = await axios.get(url, { headers: headers, timeout: 10000 });
         const jsonObject = response.data;
 
-        // Prepare the option chain data
+
         const data = jsonObject.records.data;
         const expiryDates = jsonObject.records.expiryDates;
 
@@ -52,17 +53,18 @@ app.get('/api/v1/optionChain', async (req, res) => {
             });
         });
 
-        // Save the processed data to a file (optional)
+
         fs.writeFileSync('OC.json', JSON.stringify(ocData, null, 2));
 
-        // Send the processed data as response
+
         res.json(ocData);
+        // res.json(jsonObject);
     } catch (error) {
         res.status(500).send('Error fetching data: ' + error.message);
     }
 });
 
-// Helper function to format option data
+
 function formatOptionData(option) {
     return {
         OI: option.openInterest || '-',
@@ -75,15 +77,8 @@ function formatOptionData(option) {
     };
 }
 
-// Start the server
 app.listen(PORT, () => {
     console.log(`Server Started On http://localhost:${PORT}`);
 });
 
 
-
-// Optionally update options data every second
-// setInterval(() => {
-//     optionsData = generateDemoData();
-//     console.log("Updated options data");
-// }, 1000);
