@@ -2,9 +2,16 @@ require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
-const app = express();
+const axios = require('axios');
+const fs = require('fs');
+
 const PORT = process.env.PORT || 3000;
-let optionsData = generateDemoData();
+const app = express();
+
+const url = 'https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY';
+const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'
+};
 
 app.use(express.static('public'));
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -15,54 +22,68 @@ app.get('/', (req, res) => {
 });
 
 // API endpoint for option chain data
-app.get('/api/v1/optionChain', (req, res) => {
-    res.send(optionsData);
+app.get('/api/v1/optionChain', async (req, res) => {
+    try {
+        const response = await axios.get(url, { headers: headers, timeout: 10000 });
+        const jsonObject = response.data;
+
+        // Prepare the option chain data
+        const data = jsonObject.records.data;
+        const expiryDates = jsonObject.records.expiryDates;
+
+        const ocData = {};
+        expiryDates.forEach(ed => {
+            ocData[ed] = { CE: [], PE: [] };
+
+            data.forEach(item => {
+                if (item.expiryDate === ed) {
+                    if (item.CE && item.CE.expiryDate === ed) {
+                        ocData[ed]["CE"].push(formatOptionData(item.CE));
+                    } else {
+                        ocData[ed]["CE"].push('-');
+                    }
+
+                    if (item.PE && item.PE.expiryDate === ed) {
+                        ocData[ed]["PE"].push(formatOptionData(item.PE));
+                    } else {
+                        ocData[ed]["PE"].push('-');
+                    }
+                }
+            });
+        });
+
+        // Save the processed data to a file (optional)
+        fs.writeFileSync('OC.json', JSON.stringify(ocData, null, 2));
+
+        // Send the processed data as response
+        res.json(ocData);
+    } catch (error) {
+        res.status(500).send('Error fetching data: ' + error.message);
+    }
 });
+
+// Helper function to format option data
+function formatOptionData(option) {
+    return {
+        OI: option.openInterest || '-',
+        chng_in_OI: option.changeinOpenInterest || '-',
+        volume: option.totalTradedVolume || '-',
+        iv: option.impliedVolatility || '-',
+        ltp: option.lastPrice || '-',
+        chng: option.change || '-',
+        strike: option.strikePrice || '-'
+    };
+}
 
 // Start the server
 app.listen(PORT, () => {
     console.log(`Server Started On http://localhost:${PORT}`);
 });
 
-// Function to generate random demo data
-function generateDemoData() {
-    function randomValue(base, variance) {
-        return base + (Math.random() - 0.5) * variance;
-    }
 
-    return [
-        {
-            oi: Math.floor(randomValue(1200, 100)),
-            chng_in_oi: Math.floor(randomValue(100, 50)).toString(),
-            volume: Math.floor(randomValue(150, 30)),
-            iv: randomValue(0.2, 0.05).toFixed(2),
-            ltp: randomValue(2.5, 0.5).toFixed(2),
-            chng: randomValue(0.1, 0.05).toString(),
-            strike: 100
-        },
-        {
-            oi: Math.floor(randomValue(800, 50)),
-            chng_in_oi: Math.floor(randomValue(-50, 30)).toString(),
-            volume: Math.floor(randomValue(120, 20)),
-            iv: randomValue(0.25, 0.05).toFixed(2),
-            ltp: randomValue(1.8, 0.4).toFixed(2),
-            chng: randomValue(-0.2, 0.1).toString(),
-            strike: 105
-        },
-        {
-            oi: Math.floor(randomValue(600, 70)),
-            chng_in_oi: Math.floor(randomValue(70, 30)).toString(),
-            volume: Math.floor(randomValue(90, 20)),
-            iv: randomValue(0.3, 0.05).toFixed(2),
-            ltp: randomValue(1.2, 0.3).toFixed(2),
-            chng: randomValue(0.05, 0.02).toString(),
-            strike: 110
-        }
-    ];
-}
 
-// Update options data every second
-setInterval(() => {
-    optionsData = generateDemoData();
-    console.log("Updated options data");
-}, 1000);
+// Optionally update options data every second
+// setInterval(() => {
+//     optionsData = generateDemoData();
+//     console.log("Updated options data");
+// }, 1000);

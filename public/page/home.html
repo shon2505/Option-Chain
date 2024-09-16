@@ -62,14 +62,10 @@
             </tr>
         </thead>
         <tbody>
-
         </tbody>
     </table>
 
     <script>
-
-
-
         async function fetchData() {
             try {
                 const response = await fetch('http://localhost:3000/api/v1/optionChain');
@@ -79,57 +75,65 @@
                 console.error('Error fetching data:', error);
             }
         }
-
-
-
         function createCell(content, className = '') {
             const td = document.createElement('td');
-            td.textContent = content;
+            td.textContent = content !== undefined && content !== null ? content : '-';
             if (className) {
                 td.className = className;
             }
             return td;
         }
+        function formatCellContent(content) {
 
-
-        function createRow(item) {
-            const tr = document.createElement('tr');
-
-            const columns = [
-                { key: 'oi', className: '' },
-                { key: 'chng_in_oi', className: item.chng_in_oi.startsWith('-') ? 'negative' : 'positive' },
-                { key: 'volume', className: '' },
-                { key: 'iv', className: '' },
-                { key: 'ltp', className: '' },
-                { key: 'chng', className: item.chng.startsWith('-') ? 'negative' : 'positive' },
-                { key: 'strike', className: '' },  // Missing comma added here
-                { key: 'oi', className: '' },
-                { key: 'chng_in_oi', className: item.chng_in_oi.startsWith('-') ? 'negative' : 'positive' },
-                { key: 'volume', className: '' },
-                { key: 'iv', className: '' },
-                { key: 'ltp', className: '' },
-                { key: 'chng', className: item.chng.startsWith('-') ? 'negative' : 'positive' }
-            ];
-
-            columns.forEach(col => {
-                tr.appendChild(createCell(item[col.key], col.className));
-            });
-            return tr;
+            if (typeof content !== 'string') {
+                content = String(content);
+            }
+            return content;
         }
 
+        function createRow(ce = {}, pe = {}) {
+            const tr = document.createElement('tr');
 
+            tr.appendChild(createCell(ce.oi || '-'));
+            tr.appendChild(createCell(formatCellContent(ce.chng_in_oi || '-'), formatCellContent(ce.chng_in_oi).startsWith('-') ? 'negative' : 'positive'));
+            tr.appendChild(createCell(ce.volume || '-'));
+            tr.appendChild(createCell(ce.iv || '-'));
+            tr.appendChild(createCell(ce.ltp || '-'));
+            tr.appendChild(createCell(formatCellContent(ce.chng || '-'), formatCellContent(ce.chng).startsWith('-') ? 'negative' : 'positive'));
+            tr.appendChild(createCell(ce.strike || '-'));
+
+            // Empty cell for separator
+            tr.appendChild(createCell(''));
+
+            // Create cells for Put (PE)
+            tr.appendChild(createCell(pe.oi || '-'));
+            tr.appendChild(createCell(formatCellContent(pe.chng_in_oi || '-'), formatCellContent(pe.chng_in_oi).startsWith('-') ? 'negative' : 'positive'));
+            tr.appendChild(createCell(pe.volume || '-'));
+            tr.appendChild(createCell(pe.iv || '-'));
+            tr.appendChild(createCell(pe.ltp || '-'));
+            tr.appendChild(createCell(formatCellContent(pe.chng || '-'), formatCellContent(pe.chng).startsWith('-') ? 'negative' : 'positive'));
+
+            return tr;
+        }
 
         function populateTable(data) {
             const tbody = document.querySelector('#data-table tbody');
             tbody.innerHTML = '';
-            data.forEach(item => {
-                tbody.appendChild(createRow(item));
+
+
+            Object.keys(data).forEach(expiryDate => {
+                const expiryData = data[expiryDate];
+                expiryData.CE.forEach((ce, index) => {
+                    const pe = expiryData.PE[index] || {};
+                    tbody.appendChild(createRow(ce, pe));
+                });
             });
         }
+
         window.onload = fetchData;
         setInterval(() => {
             fetchData();
-        }, 1000);
+        }, 10000); 
     </script>
 </body>
 
