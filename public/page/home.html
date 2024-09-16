@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Option Chain</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        thead {
+            background-color: #003366;
+            color: white;
+        }
+
+        .positive {
+            color: green;
+        }
+
+        .negative {
+            color: red;
+        }
+    </style>
+</head>
+
+<body>
+    <table id="data-table">
+        <thead>
+            <tr>
+                <th colspan="13">Options Data</th>
+            </tr>
+            <tr>
+                <th colspan="6">Call</th>
+                <th></th>
+                <th colspan="6">Put</th>
+            </tr>
+            <tr>
+                <th>OI</th>
+                <th>Chng in OI</th>
+                <th>Volume</th>
+                <th>IV</th>
+                <th>LTP</th>
+                <th>Chng</th>
+                <th>Strike</th>
+                <th>OI</th>
+                <th>Chng in OI</th>
+                <th>Volume</th>
+                <th>IV</th>
+                <th>LTP</th>
+                <th>Chng</th>
+            </tr>
+        </thead>
+        <tbody>
+
+        </tbody>
+    </table>
+
+    <script>
+
+
+
+        async function fetchData() {
+            try {
+                const response = await fetch('http://localhost:3000/api/v1/optionChain');
+                const data = await response.json();
+                populateTable(data);
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }
+
+
+
+        function createCell(content, className = '') {
+            const td = document.createElement('td');
+            td.textContent = content;
+            if (className) {
+                td.className = className;
+            }
+            return td;
+        }
+
+
+        function createRow(item) {
+            const tr = document.createElement('tr');
+
+            const columns = [
+                { key: 'oi', className: '' },
+                { key: 'chng_in_oi', className: item.chng_in_oi.startsWith('-') ? 'negative' : 'positive' },
+                { key: 'volume', className: '' },
+                { key: 'iv', className: '' },
+                { key: 'ltp', className: '' },
+                { key: 'chng', className: item.chng.startsWith('-') ? 'negative' : 'positive' },
+                { key: 'strike', className: '' },  // Missing comma added here
+                { key: 'oi', className: '' },
+                { key: 'chng_in_oi', className: item.chng_in_oi.startsWith('-') ? 'negative' : 'positive' },
+                { key: 'volume', className: '' },
+                { key: 'iv', className: '' },
+                { key: 'ltp', className: '' },
+                { key: 'chng', className: item.chng.startsWith('-') ? 'negative' : 'positive' }
+            ];
+
+            columns.forEach(col => {
+                tr.appendChild(createCell(item[col.key], col.className));
+            });
+            return tr;
+        }
+
+
+
+        function populateTable(data) {
+            const tbody = document.querySelector('#data-table tbody');
+            tbody.innerHTML = '';
+            data.forEach(item => {
+                tbody.appendChild(createRow(item));
+            });
+        }
+        window.onload = fetchData;
+        setInterval(() => {
+            fetchData();
+        }, 1000);
+    </script>
+</body>
+
+</html>
