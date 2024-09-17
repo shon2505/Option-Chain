@@ -41,71 +41,7 @@
         </tbody>
     </table>
 
-    <script>
-        async function fetchData() {
-            try {
-                const response = await fetch('/api/v1/optionChain');
-                if (response.status === 401) {
-                    window.location.href = '/login';
-                    return;
-                }
-                const data = await response.json();
-                populateTable(data);
-            } catch (error) {
-                console.error('Error fetching data:', error);
-            }
-        }
-        function createCell(content, className = '') {
-            const td = document.createElement('td');
-            td.textContent = content !== undefined && content !== null ? content : '-';
-            if (className) {
-                td.className = className;
-            }
-            return td;
-        }
-        function formatCellContent(content) {
-            if (typeof content !== 'string') {
-                content = String(content);
-            }
-            return content;
-        }
-        function createRow(ce = {}, pe = {}) {
-            const tr = document.createElement('tr');
-            tr.appendChild(createCell(ce.oi || '-'));
-            tr.appendChild(createCell(formatCellContent(ce.chng_in_oi || '-'), formatCellContent(ce.chng_in_oi).startsWith('-') ? 'negative' : 'positive'));
-            tr.appendChild(createCell(ce.volume || '-'));
-            tr.appendChild(createCell(ce.iv || '-'));
-            tr.appendChild(createCell(ce.ltp || '-'));
-            tr.appendChild(createCell(formatCellContent(ce.chng || '-'), formatCellContent(ce.chng).startsWith('-') ? 'negative' : 'positive'));
-            tr.appendChild(createCell(ce.strike || '-'));
-            tr.appendChild(createCell(pe.oi || '-'));
-            tr.appendChild(createCell(formatCellContent(pe.chng_in_oi || '-'), formatCellContent(pe.chng_in_oi).startsWith('-') ? 'negative' : 'positive'));
-            tr.appendChild(createCell(pe.volume || '-'));
-            tr.appendChild(createCell(pe.iv || '-'));
-            tr.appendChild(createCell(pe.ltp || '-'));
-            tr.appendChild(createCell(formatCellContent(pe.chng || '-'), formatCellContent(pe.chng).startsWith('-') ? 'negative' : 'positive'));
-            return tr;
-        }
-        function populateTable(data) {
-            const tbody = document.querySelector('#data-table tbody');
-            tbody.innerHTML = '';
-            Object.keys(data).forEach(expiryDate => {
-                const expiryData = data[expiryDate];
-                expiryData.CE.forEach((ce, index) => {
-                    const pe = expiryData.PE[index] || {};
-                    tbody.appendChild(createRow(ce, pe));
-                });
-            });
-        }
-        document.getElementById('logout-button').addEventListener('click', async () => {
-            await fetch('/logout', { method: 'POST' });
-            window.location.href = '/login';
-        });
-        window.onload = fetchData;
-        setInterval(() => {
-            fetchData();
-        }, 10000);
-    </script>
+    <script src="/script/home.js"></script>
 </body>
 
 </html>

@@ -1,12 +1,9 @@
 const mongoose = require('mongoose');
+const { connect } = require('./connectToDb')
 
-// Connect to MongoDB
-mongoose.connect('mongodb://localhost:27017/optionChainDB', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-});
+mongoose.connect('mongodb://localhost:27017/optionChainDB');
 
-// Define User Schema
+
 const userSchema = new mongoose.Schema({
     username: { type: String, unique: true, required: true },
     password: { type: String, required: true },
@@ -14,7 +11,7 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', userSchema);
 
-// Define Option Chain Schema
+
 const optionChainSchema = new mongoose.Schema({
     expiryDate: String,
     CE: [
