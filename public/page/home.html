@@ -5,36 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Option Chain</title>
-    <style>
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-        }
-
-        th,
-        td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: center;
-        }
-
-        thead {
-            background-color: #003366;
-            color: white;
-        }
-
-        .positive {
-            color: green;
-        }
-
-        .negative {
-            color: red;
-        }
-    </style>
+    <link rel="stylesheet" href="/css/styles.css">
 </head>
 
 <body>
+    <h1>Option Chain Data</h1>
+    <button id="logout-button">Logout</button>
     <table id="data-table">
         <thead>
             <tr>
@@ -68,7 +44,11 @@
     <script>
         async function fetchData() {
             try {
-                const response = await fetch('http://localhost:3000/api/v1/optionChain');
+                const response = await fetch('/api/v1/optionChain');
+                if (response.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
                 const data = await response.json();
                 populateTable(data);
             } catch (error) {
@@ -89,10 +69,8 @@
             }
             return content;
         }
-
         function createRow(ce = {}, pe = {}) {
             const tr = document.createElement('tr');
-
             tr.appendChild(createCell(ce.oi || '-'));
             tr.appendChild(createCell(formatCellContent(ce.chng_in_oi || '-'), formatCellContent(ce.chng_in_oi).startsWith('-') ? 'negative' : 'positive'));
             tr.appendChild(createCell(ce.volume || '-'));
@@ -100,23 +78,17 @@
             tr.appendChild(createCell(ce.ltp || '-'));
             tr.appendChild(createCell(formatCellContent(ce.chng || '-'), formatCellContent(ce.chng).startsWith('-') ? 'negative' : 'positive'));
             tr.appendChild(createCell(ce.strike || '-'));
-
-
             tr.appendChild(createCell(pe.oi || '-'));
             tr.appendChild(createCell(formatCellContent(pe.chng_in_oi || '-'), formatCellContent(pe.chng_in_oi).startsWith('-') ? 'negative' : 'positive'));
             tr.appendChild(createCell(pe.volume || '-'));
             tr.appendChild(createCell(pe.iv || '-'));
             tr.appendChild(createCell(pe.ltp || '-'));
             tr.appendChild(createCell(formatCellContent(pe.chng || '-'), formatCellContent(pe.chng).startsWith('-') ? 'negative' : 'positive'));
-
             return tr;
         }
-
         function populateTable(data) {
             const tbody = document.querySelector('#data-table tbody');
             tbody.innerHTML = '';
-
-
             Object.keys(data).forEach(expiryDate => {
                 const expiryData = data[expiryDate];
                 expiryData.CE.forEach((ce, index) => {
@@ -125,11 +97,14 @@
                 });
             });
         }
-
+        document.getElementById('logout-button').addEventListener('click', async () => {
+            await fetch('/logout', { method: 'POST' });
+            window.location.href = '/login';
+        });
         window.onload = fetchData;
         setInterval(() => {
             fetchData();
-        }, 10000); 
+        }, 10000);
     </script>
 </body>
 
