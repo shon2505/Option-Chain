@@ -16,8 +16,8 @@ app.use(express.static('public'));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-app.use('/', getRoute); // Handle GET requests
-app.use('/', postRoute); // Handle POST requests
+app.use('/', getRoute);
+app.use('/', postRoute);
 
 // Connect to MongoDB
 mongoose.connect('mongodb://localhost:27017/optionChainDB').then(() => console.log('MongoDB connected'))

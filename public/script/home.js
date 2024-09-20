@@ -65,7 +65,7 @@ function populateTable(data) {
         const row = createRow(e.CE, e.PE);
         tbody.appendChild(row);
 
-        if (i >= 50) {
+        if (i >= 20) {
             return;
         }
     });
