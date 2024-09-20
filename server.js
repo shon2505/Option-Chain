@@ -34,7 +34,7 @@ async function fetchAndStoreData() {
         const response = await axios.get(url, { headers: headers, timeout: 10000 });
         const data = response.data.filtered.data;
 
-        
+
         if (!Array.isArray(data)) {
             throw new Error('Data is not an array');
         }
