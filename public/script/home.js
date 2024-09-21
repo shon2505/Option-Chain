@@ -5,6 +5,7 @@ async function fetchData() {
             window.location.href = '/login';
             return;
         }
+        // console.log(response.json());
         console.log(response)
 
         if (!response.ok) {
@@ -62,12 +63,13 @@ function populateTable(data) {
     let i = 0;
     data.forEach(e => {
         i++;
+        // let e = e1.result
         const row = createRow(e.CE, e.PE);
         tbody.appendChild(row);
 
-        if (i >= 20) {
-            return;
-        }
+        // if (i >= 20) {  // no need of this RN
+        //     return;
+        // }
     });
 }
 
@@ -77,4 +79,4 @@ document.getElementById('logout-button').addEventListener('click', async () => {
 });
 
 window.onload = fetchData;
-setInterval(fetchData, 1000);  
+setInterval(fetchData, 5000);  
