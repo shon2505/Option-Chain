@@ -1,4 +1,4 @@
-/* styles.css */
+/* Base styles */
 body {
     font-family: Arial, sans-serif;
     margin: 0;
@@ -10,6 +10,7 @@ h1, h2 {
     color: #003366;
 }
 
+/* Button styles */
 button {
     background-color: #003366;
     color: white;
@@ -28,6 +29,7 @@ button:hover {
     background-color: #002244;
 }
 
+/* Form styles */
 form {
     margin: 20px;
     padding: 20px;
@@ -49,6 +51,7 @@ input[type="text"], input[type="password"] {
     border-radius: 4px;
 }
 
+/* Anchor link styles */
 a {
     color: #003366;
     text-decoration: none;
@@ -58,6 +61,7 @@ a:hover {
     text-decoration: underline;
 }
 
+/* Table styles */
 table {
     width: 100%;
     border-collapse: collapse;
@@ -67,21 +71,36 @@ table {
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
+/* Table header and cell styles */
 th, td {
     border: 1px solid #ddd;
     padding: 8px;
     text-align: center;
 }
 
+/* Header styles */
 thead {
     background-color: #003366;
     color: white;
 }
 
+/* Highlight positive and negative values */
 .positive {
     color: green;
 }
 
 .negative {
     color: red;
+}
+
+/* New row styles - row added between 10th and 11th */
+tbody tr:nth-child(11) {
+    background-color: #e0f7fa;
+    font-weight: bold;
+    color: #003366;
+}
+
+/* Ensure consistent text alignment */
+th, td {
+    text-align: center;
 }
