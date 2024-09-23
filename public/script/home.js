@@ -5,13 +5,10 @@ async function fetchData() {
             window.location.href = '/login';
             return;
         }
-
         if (!response.ok) {
             throw new Error(`Server error: ${response.status}`);
         }
-
         const data = await response.json();
-
         try {
             populateTable(data);
         } catch (err) {
@@ -36,7 +33,7 @@ function formatCell(content) {
 function createRow(ce = {}, pe = {}) {
     const tr = document.createElement('tr');
     // Call (CE) columns
-    tr.appendChild(createCell(ce.openInterest)); // Call OI
+    tr.appendChild(createCell(ce.openInterest));
     tr.appendChild(createCell(formatCell(ce.changeinOpenInterest), String(ce.changeinOpenInterest || '').startsWith('-') ? 'negative' : 'positive'));
     tr.appendChild(createCell(ce.totalTradedVolume)); // Call Volume
     tr.appendChild(createCell(ce.impliedVolatility)); // Call IV
@@ -74,8 +71,17 @@ function populateTable(data) {
             ceHeader.colSpan = 6;
             ceHeader.textContent = 'CE';
 
+
+            // can change this based on our liking  for bullish and bearish 
+
+            // formatCell(ce.change), String(ce.change || '').startsWith('-') ? 'negative' : 'positive')
+            // ceHeader.className = "negative" ||"positive";
+
             const spotPriceHeader = document.createElement('th');
             spotPriceHeader.textContent = 'Spot Price';
+
+            // spotPriceHeader.className = "negative" || "positive";
+
 
             const peHeader = document.createElement('th');
             peHeader.colSpan = 6;
@@ -85,7 +91,7 @@ function populateTable(data) {
             headerRow.appendChild(spotPriceHeader);
             headerRow.appendChild(peHeader);
 
-            tbody.appendChild(headerRow); // Insert the new row
+            tbody.appendChild(headerRow);
         }
     });
 }
@@ -96,4 +102,6 @@ document.getElementById('logout-button').addEventListener('click', async () => {
 });
 
 window.onload = fetchData;
-setInterval(fetchData, 1000);  // Fetch data every 5 seconds
+
+// front end page will be refrshing every 10 second for now 
+setInterval(fetchData, 10000);  

@@ -49,7 +49,7 @@ app.get('/api/v1/optionChain', authenticateToken, async (req, res) => {
 
 // app.get('/api/v1/under', async (req, res) => {
 //     try {
-//         const response = await axios.get(url, { headers: headers, timeout: 10000 });
+//         const response = await axios.get(url, { headers: headers, timeout: 30000 });
 //         const jsonObject = response.data.filtered.data;
 
 //         // Get the underlying price
@@ -76,7 +76,7 @@ app.get('/api/v1/optionChain', authenticateToken, async (req, res) => {
 
 app.get('/api/v1/under', async (req, res) => {
     try {
-        const response = await axios.get(url, { headers: headers, timeout: 10000 });
+        const response = await axios.get(url, { headers: headers, timeout: 30000 });
         const jsonObject = response.data.filtered.data;
 
         // Get the underlying price
