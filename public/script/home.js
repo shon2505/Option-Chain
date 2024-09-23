@@ -5,15 +5,12 @@ async function fetchData() {
             window.location.href = '/login';
             return;
         }
-        // console.log(response.json());
-        console.log(response)
 
         if (!response.ok) {
             throw new Error(`Server error: ${response.status}`);
         }
 
         const data = await response.json();
-
 
         try {
             populateTable(data);
@@ -38,38 +35,58 @@ function formatCell(content) {
 
 function createRow(ce = {}, pe = {}) {
     const tr = document.createElement('tr');
+    // Call (CE) columns
     tr.appendChild(createCell(ce.openInterest)); // Call OI
     tr.appendChild(createCell(formatCell(ce.changeinOpenInterest), String(ce.changeinOpenInterest || '').startsWith('-') ? 'negative' : 'positive'));
     tr.appendChild(createCell(ce.totalTradedVolume)); // Call Volume
     tr.appendChild(createCell(ce.impliedVolatility)); // Call IV
     tr.appendChild(createCell(ce.lastPrice)); // Call LTP
     tr.appendChild(createCell(formatCell(ce.change), String(ce.change || '').startsWith('-') ? 'negative' : 'positive')); // Call Change
+
+    // Strike Price (common)
     tr.appendChild(createCell(ce.strikePrice)); // Strike Price
-    tr.appendChild(createCell(pe.openInterest)); // Put OI
-    tr.appendChild(createCell(formatCell(pe.changeinOpenInterest), String(pe.changeinOpenInterest || '').startsWith('-') ? 'negative' : 'positive'));
-    tr.appendChild(createCell(pe.totalTradedVolume)); // Put Volume
-    tr.appendChild(createCell(pe.impliedVolatility)); // Put IV
-    tr.appendChild(createCell(pe.lastPrice)); // Put LTP
+
+    // Put (PE) columns in reversed order
     tr.appendChild(createCell(formatCell(pe.change), String(pe.change || '').startsWith('-') ? 'negative' : 'positive')); // Put Change
+    tr.appendChild(createCell(pe.lastPrice)); // Put LTP
+    tr.appendChild(createCell(pe.impliedVolatility)); // Put IV
+    tr.appendChild(createCell(pe.totalTradedVolume)); // Put Volume
+    tr.appendChild(createCell(formatCell(pe.changeinOpenInterest), String(pe.changeinOpenInterest || '').startsWith('-') ? 'negative' : 'positive')); // Put Change in OI
+    tr.appendChild(createCell(pe.openInterest)); // Put OI
+
     return tr;
 }
 
-
 function populateTable(data) {
     const tbody = document.querySelector('#data-table tbody');
-    tbody.innerHTML = '';
-
+    tbody.innerHTML = ''; // Clear the existing table rows
 
     let i = 0;
     data.forEach(e => {
         i++;
-        // let e = e1.result
         const row = createRow(e.CE, e.PE);
         tbody.appendChild(row);
 
-        // if (i >= 20) {  // no need of this RN
-        //     return;
-        // }
+        // Insert a new header row between the 10th and 11th rows
+        if (i === 10) {
+            const headerRow = document.createElement('tr');
+            const ceHeader = document.createElement('th');
+            ceHeader.colSpan = 6;
+            ceHeader.textContent = 'CE';
+
+            const spotPriceHeader = document.createElement('th');
+            spotPriceHeader.textContent = 'Spot Price';
+
+            const peHeader = document.createElement('th');
+            peHeader.colSpan = 6;
+            peHeader.textContent = 'PE';
+
+            headerRow.appendChild(ceHeader);
+            headerRow.appendChild(spotPriceHeader);
+            headerRow.appendChild(peHeader);
+
+            tbody.appendChild(headerRow); // Insert the new row
+        }
     });
 }
 
@@ -79,4 +96,4 @@ document.getElementById('logout-button').addEventListener('click', async () => {
 });
 
 window.onload = fetchData;
-setInterval(fetchData, 5000);  
+setInterval(fetchData, 1000);  // Fetch data every 5 seconds
