@@ -22,60 +22,64 @@ app.get('/signup', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'page', 'signup.html'));
 });
 
+// Example usage inside your main option chain processing code
 app.get('/api/v1/optionChain', authenticateToken, async (req, res) => {
     try {
         const response = await axios.get(url, { headers: headers, timeout: 10000 });
         const jsonObject = response.data.filtered.data;
 
         const underlyingPrice = jsonObject[0].PE.underlyingValue || jsonObject[0].CE.underlyingValue;
-
         const closestIndex = jsonObject.reduce((prevIndex, current, index) => {
             return Math.abs(current.strikePrice - underlyingPrice) < Math.abs(jsonObject[prevIndex].strikePrice - underlyingPrice) ? index : prevIndex;
         }, 0);
 
         const startIndex = Math.max(0, closestIndex - 10);
         const endIndex = Math.min(jsonObject.length, closestIndex + 11);
-
         const result = jsonObject.slice(startIndex, endIndex);
 
         result.forEach(element => {
-            const T = calculateTimeToExpiration(element.expiryDate);
+            try {
+                const T = calculateTimeToExpiration(element.expiryDate); // Calculate time to expiration
+                const strikePrice = element.strikePrice;
 
-            if (T <= 0 || underlyingPrice <= 0 || element.strikePrice <= 0) {
-                console.warn(`Invalid parameters: T = ${T}, Underlying Price = ${underlyingPrice}, Strike Price = ${element.strikePrice}`);
-                element.CE.impliedVolatility = 0.2; // Fallback
-                element.PE.impliedVolatility = 0.2; // Fallback
-                return;
+                if (T <= 0 || underlyingPrice <= 0 || strikePrice <= 0) {
+                    console.warn(`Invalid parameters: T = ${T}, Underlying Price = ${underlyingPrice}, Strike Price = ${strikePrice}`);
+                    element.CE.impliedVolatility = null;
+                    element.PE.impliedVolatility = null;
+                    return;
+                }
+
+                // Extract market prices for call and put options
+                const callMarketPrice = element.CE.lastPrice;
+                const putMarketPrice = element.PE.lastPrice;
+
+                if (callMarketPrice <= 0 || putMarketPrice <= 0) {
+                    console.warn(`Invalid market price for strike ${strikePrice}`);
+                    element.CE.impliedVolatility = null;
+                    element.PE.impliedVolatility = null;
+                    return;
+                }
+
+                // Calculate implied volatility for call and put options
+                const callIV = impliedVolatility(underlyingPrice, strikePrice, T, 0.065, callMarketPrice);
+                const putIV = impliedVolatility(underlyingPrice, strikePrice, T, 0.065, putMarketPrice);
+
+                // Calculate Greeks (delta, theta) for call and put options using the calculated IV
+                const { delta: deltaCall, theta: thetaCall } = optionGreeks(underlyingPrice, strikePrice, T, 0.065, callIV);
+                const { delta: deltaPut, theta: thetaPut } = optionGreeks(underlyingPrice, strikePrice, T, 0.065, putIV);
+
+                // Update the result with calculated values
+                element.CE.delta = deltaCall;
+                element.CE.theta = thetaCall;
+                element.PE.delta = deltaPut;
+                element.PE.theta = thetaPut;
+                element.CE.impliedVolatility = callIV; // Store calculated IV for call
+                element.PE.impliedVolatility = putIV;  // Store calculated IV for put
+            } catch (error) {
+                console.error(`Error calculating implied volatility for strike ${element.strikePrice}: ${error.message}`);
+                element.CE.impliedVolatility = null;
+                element.PE.impliedVolatility = null;
             }
-
-            const callPrice = blackScholesCall(underlyingPrice, element.strikePrice, T, 0.065, 0.2); // Using a default sigma
-            const putPrice = blackScholesPut(underlyingPrice, element.strikePrice, T, 0.065, 0.2); // Using a default sigma
-
-            const callIV = impliedVolatility(underlyingPrice, element.strikePrice, T, 0.065, callPrice);
-            const putIV = impliedVolatility(underlyingPrice, element.strikePrice, T, 0.065, putPrice);
-
-            const { delta: deltaCall, theta: thetaCall } = optionGreeks(
-                underlyingPrice,
-                element.strikePrice,
-                T,
-                0.065,
-                callIV
-            );
-
-            const { delta: deltaPut, theta: thetaPut } = optionGreeks(
-                underlyingPrice,
-                element.strikePrice,
-                T,
-                0.065,
-                putIV
-            );
-
-            element.CE.delta = deltaCall;
-            element.CE.theta = thetaCall;
-            element.PE.delta = deltaPut;
-            element.PE.theta = thetaPut;
-            element.CE.impliedVolatility = callIV; // Store call IV
-            element.PE.impliedVolatility = putIV;   // Store put IV
         });
 
         result.sort((a, b) => b.strikePrice - a.strikePrice);
@@ -102,31 +106,48 @@ function blackScholesPut(S, K, T, r, sigma) {
     return K * Math.exp(-r * T) * cnd(-d2) - S * cnd(-d1);
 }
 
+// Function to calculate the implied volatility using Newton-Raphson method
 function impliedVolatility(S, K, T, r, marketPrice) {
-    const maxIterations = 100;
-    const tolerance = 1e-5;
-    let sigma = 0.2; // Initial guess for volatility
+    let sigma = 0.2;  // Reasonable starting guess for sigma (20% implied volatility)
+    const MAX_ITERATIONS = 100;
+    const TOLERANCE = 1e-5;  // Small tolerance value for convergence
+    const MAX_SIGMA = 5.0;  // Max allowable sigma (500%)
+    const MIN_SIGMA = 1e-6;  // Small lower bound to avoid zero or negative volatility
 
-    for (let i = 0; i < maxIterations; i++) {
-        const price = blackScholesCall(S, K, T, r, sigma);
-        const vega = blackScholesVega(S, K, T, r, sigma);
-        const diff = marketPrice - price;
+    for (let i = 0; i < MAX_ITERATIONS; i++) {
+        const price = blackScholesCall(S, K, T, r, sigma); // Option price using Black-Scholes model
+        const vega = blackScholesVega(S, K, T, r, sigma);  // Option vega (sensitivity to volatility)
+        const diff = price - marketPrice;  // Difference between the calculated price and market price
 
         console.log(`Iteration ${i}: sigma = ${sigma}, price = ${price}, marketPrice = ${marketPrice}, diff = ${diff}, vega = ${vega}`);
 
-        if (Math.abs(diff) < tolerance) {
-            return sigma; // Found the implied volatility
+        // If the difference is within the acceptable tolerance, we consider it converged
+        if (Math.abs(diff) < TOLERANCE) return sigma;
+
+        // If vega is too small (close to 0), we can't continue as division by vega would be unstable
+        if (vega < TOLERANCE) {
+            console.warn(`Vega is too small at iteration ${i}, sigma = ${sigma}. Cannot continue with volatility calculation.`);
+            break;
         }
 
-        if (vega <= 0) {
-            console.warn(`Vega is non-positive at iteration ${i}. Current sigma: ${sigma}`);
-            break; // Vega is non-positive, cannot continue
+        // Update sigma using the Newton-Raphson method
+        sigma -= diff / vega;
+
+        // Cap sigma within reasonable bounds to avoid runaway values
+        if (sigma > MAX_SIGMA) {
+            console.warn(`Sigma exceeded max allowable value (${MAX_SIGMA}) at iteration ${i}. Returning max sigma.`);
+            return MAX_SIGMA;
         }
 
-        sigma += diff / vega; // Newton-Raphson update
+        if (sigma < MIN_SIGMA) {
+            console.warn(`Sigma fell below min allowable value (${MIN_SIGMA}) at iteration ${i}. Returning min sigma.`);
+            return MIN_SIGMA;
+        }
     }
 
-    throw new Error(`Implied volatility not found within max iterations. Last sigma: ${sigma}`);
+    // If we reach the maximum number of iterations without converging, throw an error or return a default value
+    console.error(`Failed to converge after ${MAX_ITERATIONS} iterations. Last sigma value: ${sigma}`);
+    return sigma;  // Return the last sigma value (could also return a default value like null)
 }
 
 function blackScholesVega(S, K, T, r, sigma) {
