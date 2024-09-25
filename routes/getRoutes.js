@@ -40,24 +40,30 @@ app.get('/api/v1/optionChain', authenticateToken, async (req, res) => {
 
         result.forEach(element => {
             const T = calculateTimeToExpiration(element.expiryDate);
-            const callIV = element.CE.impliedVolatility; // Implied volatility for call
-            const putIV = element.PE.impliedVolatility;  // Implied volatility for put
 
-            const { deltaCall, thetaCall } = optionGreeks(
-                underlyingPrice,
-                element.strikePrice,
-                T,
-                0.065,
-                callIV // Use call implied volatility
-            );
+            if (T <= 0 || underlyingPrice <= 0 || element.strikePrice <= 0) {
+                console.warn(`Invalid parameters: T = ${T}, Underlying Price = ${underlyingPrice}, Strike Price = ${element.strikePrice}`);
+                element.CE.impliedVolatility = 0.2; // Fallback
+                element.PE.impliedVolatility = 0.2; // Fallback
+                return;
+            }
 
-            const { deltaPut, thetaPut } = optionGreeks(
-                underlyingPrice,
-                element.strikePrice,
-                T,
-                0.065,
-                putIV // Use put implied volatility
-            );
+            const callPrice = blackScholesCall(underlyingPrice, element.strikePrice, T, 0.065, 0.2);
+            const putPrice = blackScholesPut(underlyingPrice, element.strikePrice, T, 0.065, 0.2);
+
+            try {
+                const callIV = impliedVolatility(underlyingPrice, element.strikePrice, T, 0.065, callPrice);
+                const putIV = impliedVolatility(underlyingPrice, element.strikePrice, T, 0.065, putPrice);
+                element.CE.impliedVolatility = callIV;
+                element.PE.impliedVolatility = putIV;
+            } catch (error) {
+                console.warn(`Error calculating implied volatility for strike ${element.strikePrice}: ${error.message}`);
+                element.CE.impliedVolatility = 0.2; // Fallback
+                element.PE.impliedVolatility = 0.2; // Fallback
+            }
+
+            const { delta: deltaCall, theta: thetaCall } = optionGreeks(underlyingPrice, element.strikePrice, T, 0.065, element.CE.impliedVolatility);
+            const { delta: deltaPut, theta: thetaPut } = optionGreeks(underlyingPrice, element.strikePrice, T, 0.065, element.PE.impliedVolatility);
 
             element.CE.delta = deltaCall;
             element.CE.theta = thetaCall;
@@ -68,28 +74,74 @@ app.get('/api/v1/optionChain', authenticateToken, async (req, res) => {
         result.sort((a, b) => b.strikePrice - a.strikePrice);
         res.json(result);
     } catch (error) {
-        console.error(error); // Log the error for debugging
+        console.error(error);
         res.status(500).send('Error fetching data: ' + error.message);
     }
 });
-
-
 
 function cnd(x) {
     return (1.0 + math.erf(x / Math.SQRT2)) / 2.0;
 }
 
-// Greeks calculation for Delta and Theta
+function blackScholesCall(S, K, T, r, sigma) {
+    const d1 = (Math.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * Math.sqrt(T));
+    const d2 = d1 - sigma * Math.sqrt(T);
+    return S * cnd(d1) - K * Math.exp(-r * T) * cnd(d2);
+}
+
+function blackScholesPut(S, K, T, r, sigma) {
+    const d1 = (Math.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * Math.sqrt(T));
+    const d2 = d1 - sigma * Math.sqrt(T);
+    return K * Math.exp(-r * T) * cnd(-d2) - S * cnd(-d1);
+}
+
+function impliedVolatility(S, K, T, r, marketPrice) {
+    const maxIterations = 100;
+    const tolerance = 1e-5;
+    let sigma = 0.2; // Initial guess for volatility
+
+    for (let i = 0; i < maxIterations; i++) {
+        const price = blackScholesCall(S, K, T, r, sigma);
+        const vega = blackScholesVega(S, K, T, r, sigma);
+        const diff = marketPrice - price;
+
+        if (vega <= 0) {
+            console.warn(`Vega is non-positive at iteration ${i}. Current sigma: ${sigma}`);
+            throw new Error(`Cannot calculate implied volatility. Last sigma: ${sigma}`);
+        }
+
+        sigma += diff / vega;
+
+        if (Math.abs(diff) < tolerance) {
+            return sigma; // Found the implied volatility
+        }
+
+        // Prevent sigma from diverging too much
+        if (sigma < 0 || sigma > 1) {
+            console.warn(`Sigma out of bounds at iteration ${i}. Last sigma: ${sigma}`);
+            throw new Error(`Implied volatility not found within max iterations. Last sigma: ${sigma}`);
+        }
+    }
+
+    throw new Error(`Implied volatility not found within max iterations. Last sigma: ${sigma}`);
+}
+
+function blackScholesVega(S, K, T, r, sigma) {
+    const d1 = (Math.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * Math.sqrt(T));
+    return S * normPdf(d1) * Math.sqrt(T);
+}
+
+function normPdf(x) {
+    return (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * x * x);
+}
+
 function optionGreeks(S, K, T, r, sigma) {
     const d1 = (Math.log(S / K) + (r + sigma ** 2 / 2) * T) / (sigma * Math.sqrt(T));
     const d2 = d1 - sigma * Math.sqrt(T);
 
-    // Delta calculations
     const delta = cnd(d1);
-
-    // Theta calculations
     const theta = (
-        -S * math.exp(-d1 * d1 / 2) * sigma / (2 * Math.sqrt(2 * Math.PI * T))
+        -S * normPdf(d1) * sigma / (2 * Math.sqrt(2 * Math.PI * T))
         - r * K * Math.exp(-r * T) * cnd(d2)
     );
 
@@ -97,10 +149,9 @@ function optionGreeks(S, K, T, r, sigma) {
 }
 
 function calculateTimeToExpiration(expiryDate) {
-    const today = new Date(); // Get today's date
-    const expiry = new Date(expiryDate); // Convert expiry date to Date object
+    const today = new Date();
+    const expiry = new Date(expiryDate);
 
-    // Ensure the expiry date is valid
     if (isNaN(expiry)) {
         throw new Error('Invalid expiry date format');
     }
