@@ -119,14 +119,14 @@ function impliedVolatility(S, K, T, r, marketPrice) {
         const vega = blackScholesVega(S, K, T, r, sigma);  // Option vega (sensitivity to volatility)
         const diff = price - marketPrice;  // Difference between the calculated price and market price
 
-        console.log(`Iteration ${i}: sigma = ${sigma}, price = ${price}, marketPrice = ${marketPrice}, diff = ${diff}, vega = ${vega}`);
+        // console.log(`Iteration ${i}: sigma = ${sigma}, price = ${price}, marketPrice = ${marketPrice}, diff = ${diff}, vega = ${vega}`);
 
         // If the difference is within the acceptable tolerance, we consider it converged
         if (Math.abs(diff) < TOLERANCE) return sigma;
 
         // If vega is too small (close to 0), we can't continue as division by vega would be unstable
         if (vega < TOLERANCE) {
-            console.warn(`Vega is too small at iteration ${i}, sigma = ${sigma}. Cannot continue with volatility calculation.`);
+            // console.warn(`Vega is too small at iteration ${i}, sigma = ${sigma}. Cannot continue with volatility calculation.`);
             break;
         }
 
@@ -135,18 +135,18 @@ function impliedVolatility(S, K, T, r, marketPrice) {
 
         // Cap sigma within reasonable bounds to avoid runaway values
         if (sigma > MAX_SIGMA) {
-            console.warn(`Sigma exceeded max allowable value (${MAX_SIGMA}) at iteration ${i}. Returning max sigma.`);
+            // console.warn(`Sigma exceeded max allowable value (${MAX_SIGMA}) at iteration ${i}. Returning max sigma.`);
             return MAX_SIGMA;
         }
 
         if (sigma < MIN_SIGMA) {
-            console.warn(`Sigma fell below min allowable value (${MIN_SIGMA}) at iteration ${i}. Returning min sigma.`);
+            // console.warn(`Sigma fell below min allowable value (${MIN_SIGMA}) at iteration ${i}. Returning min sigma.`);
             return MIN_SIGMA;
         }
     }
 
     // If we reach the maximum number of iterations without converging, throw an error or return a default value
-    console.error(`Failed to converge after ${MAX_ITERATIONS} iterations. Last sigma value: ${sigma}`);
+    // console.error(`Failed to converge after ${MAX_ITERATIONS} iterations. Last sigma value: ${sigma}`);
     return sigma;  // Return the last sigma value (could also return a default value like null)
 }
 
