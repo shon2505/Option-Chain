@@ -8,6 +8,7 @@ body {
     justify-content: center;
     align-items: center;
     height: 100vh;
+    position: relative;
 }
 
 .container {
@@ -17,31 +18,14 @@ body {
     border-radius: 10px;
     box-shadow: 0 0 25px rgba(0, 0, 0, 0.1);
     text-align: center;
+    position: relative;
 }
 
-/* Logo Styles */
-.logo {
-    color: #fff; /* White text */
+h1 {
+    color: #003366;
     margin-bottom: 20px;
-    font-size: 36px; /* Adjusted font size */
-    font-weight: normal; /* Normal font weight */
-    padding: 10px; /* Padding around the text */
-    border-radius: 8px; /* Rounded corners */
-    background: linear-gradient(135deg, #004080, #003366); /* Gradient background */
-    display: inline-block; /* To apply animation */
-    animation: fadeIn 2s ease; /* Fade-in animation */
-}
-
-/* Fade-in Animation */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    font-size: 32px;
+    font-weight: bold;
 }
 
 h2 {
@@ -65,9 +49,7 @@ label {
     text-align: left;
 }
 
-input[type="text"],
-input[type="email"],
-input[type="password"] {
+input[type="text"], input[type="password"], input[type="email"] {
     width: 100%;
     padding: 12px;
     margin-bottom: 20px;
@@ -118,4 +100,37 @@ a:hover {
     font-size: 12px;
     display: none;
     margin-bottom: 10px;
+}
+
+/* Logo Styles */
+.logo {
+    color: #fff; /* White text */
+    margin-bottom: 20px;
+    font-size: 36px; /* Adjusted font size */
+    font-weight: normal; /* Normal font weight */
+    padding: 10px; /* Padding around the text */
+    border-radius: 8px; /* Rounded corners */
+    background: linear-gradient(135deg, #004080, #003366); /* Gradient background */
+    display: inline-block; /* To apply animation */
+    animation: fadeIn 2s ease; /* Fade-in animation */
+}
+
+/* Fade-in Animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .container {
+        width: 90%;
+        padding: 20px;
+    }
 }

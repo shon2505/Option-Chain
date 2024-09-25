@@ -19,6 +19,12 @@ function validateEmail(email) {
     return emailRegex.test(email);
 }
 
+// Validate mobile number using regex (10 digits)
+function validateMobile(mobile) {
+    const mobileRegex = /^[0-9]{10}$/;
+    return mobileRegex.test(mobile);
+}
+
 // Validation for Login Form
 function validateLoginForm(e) {
     let valid = true;
@@ -57,14 +63,14 @@ function validateSignupForm(e) {
 
     const username = document.getElementById('username').value;
     const email = document.getElementById('email').value;
+    const mobile = document.getElementById('mobile').value; // New mobile field
     const password = document.getElementById('password').value;
-    const confirmPassword = document.getElementById('confirmPassword').value;
 
     // Reset error visibility
     hideError('username');
     hideError('email');
+    hideError('mobile'); // Reset mobile error
     hideError('password');
-    hideError('confirmPassword');
 
     // Validate Username
     if (!username) {
@@ -87,6 +93,15 @@ function validateSignupForm(e) {
         valid = false;
     }
 
+    // Validate Mobile
+    if (!mobile) {
+        showError('mobile', 'Mobile number is required');
+        valid = false;
+    } else if (!validateMobile(mobile)) {
+        showError('mobile', 'Invalid mobile number. It must be 10 digits.');
+        valid = false;
+    }
+
     // Validate Password
     if (!password) {
         showError('password', 'Password is required');
@@ -96,15 +111,6 @@ function validateSignupForm(e) {
         valid = false;
     } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])/.test(password)) {
         showError('password', 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character');
-        valid = false;
-    }
-
-    // Validate Confirm Password
-    if (!confirmPassword) {
-        showError('confirmPassword', 'Confirm password is required');
-        valid = false;
-    } else if (password !== confirmPassword) {
-        showError('confirmPassword', 'Passwords do not match');
         valid = false;
     }
 
@@ -125,11 +131,11 @@ document.getElementById('username')?.addEventListener('input', () => {
 document.getElementById('email')?.addEventListener('input', () => {
     hideError('email');
 });
+document.getElementById('mobile')?.addEventListener('input', () => {  // Mobile input event
+    hideError('mobile');
+});
 document.getElementById('password')?.addEventListener('input', () => {
     hideError('password');
-});
-document.getElementById('confirmPassword')?.addEventListener('input', () => {
-    hideError('confirmPassword');
 });
 
 // Dynamic validation for login form

@@ -15,19 +15,19 @@
         <form id="signupForm" action="/signup" method="POST">
             <label for="username">Username:</label>
             <input type="text" id="username" name="username" required>
-            <small class="error" id="usernameError">Username is required</small>
-            <br>
+            <div class="error" id="usernameError">Username is required and should be 3-15 characters long.</div>
+
             <label for="email">Email:</label>
-            <input type="email" id="email" name="email" required>
-            <small class="error" id="emailError">Invalid email address</small>
-            <br>
+            <input type="text" id="email" name="email" required>
+            <div class="error" id="emailError">Please enter a valid email address.</div>
+
+            <label for="mobile">Mobile Number:</label>
+            <input type="text" id="mobile" name="mobile" required>
+            <div class="error" id="mobileError">Please enter a valid 10-digit mobile number.</div>
+
             <label for="password">Password:</label>
             <input type="password" id="password" name="password" required>
-            <small class="error" id="passwordError">Password must be at least 6 characters</small>
-            <br>
-            <label for="confirmPassword">Confirm Password:</label>
-            <input type="password" id="confirmPassword" name="confirmPassword" required>
-            <small class="error" id="confirmPasswordError">Passwords do not match</small>
+            <div class="error" id="passwordError">Password must be at least 6 characters long.</div>
             <br>
             <button type="submit">Signup</button>
         </form>
