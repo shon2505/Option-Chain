@@ -4,22 +4,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Signup</title>
-    <link rel="stylesheet" href="/css/styles.css">
+    <title>Signup - OptionDost</title>
+    <link rel="stylesheet" href="/css/signup.css">
 </head>
 
 <body>
-    <h2>Signup</h2>
-    <form action="/signup" method="POST">
-        <label for="username">Username:</label>
-        <input type="text" id="username" name="username" required>
-        <br>
-        <label for="password">Password:</label>
-        <input type="password" id="password" name="password" required>
-        <br>
-        <button type="submit">Signup</button>
-    </form>
-    <a href="/login">Login</a>
+    <div class="container">
+        <h1 class="logo">OptionDost</h1>
+        <h2>Signup</h2>
+        <form id="signupForm" action="/signup" method="POST">
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" required>
+            <small class="error" id="usernameError">Username is required</small>
+            <br>
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required>
+            <small class="error" id="emailError">Invalid email address</small>
+            <br>
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+            <small class="error" id="passwordError">Password must be at least 6 characters</small>
+            <br>
+            <label for="confirmPassword">Confirm Password:</label>
+            <input type="password" id="confirmPassword" name="confirmPassword" required>
+            <small class="error" id="confirmPasswordError">Passwords do not match</small>
+            <br>
+            <button type="submit">Signup</button>
+        </form>
+        <p>Already have an account? <a href="/login">Login</a></p>
+    </div>
+
+    <script src="/script/validation.js"></script>
 </body>
 
 </html>

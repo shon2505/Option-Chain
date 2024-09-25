@@ -104,3 +104,31 @@ tbody tr:nth-child(11) {
 th, td {
     text-align: center;
 }
+.option-dost-logo {
+    position: absolute; /* Position it relative to the nearest positioned ancestor */
+    top: 20px; /* Distance from the top */
+    right: 20px; /* Distance from the right */
+    background-color: #003366; /* Blue background */
+    padding: 10px 15px;
+    border-radius: 5px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    animation: fadeIn 1s ease-in-out; /* Animation effect for appearance */
+}
+
+.option-dost-logo h1 {
+    margin: 0; /* Remove default margin */
+    color: white; /* Change text color to white */
+    font-size: 24px; /* Adjust font size as needed */
+}
+
+/* Animation for fade-in effect */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px); /* Slide in from above */
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
