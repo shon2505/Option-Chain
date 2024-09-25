@@ -48,27 +48,34 @@ app.get('/api/v1/optionChain', authenticateToken, async (req, res) => {
                 return;
             }
 
-            const callPrice = blackScholesCall(underlyingPrice, element.strikePrice, T, 0.065, 0.2);
-            const putPrice = blackScholesPut(underlyingPrice, element.strikePrice, T, 0.065, 0.2);
+            const callPrice = blackScholesCall(underlyingPrice, element.strikePrice, T, 0.065, 0.2); // Using a default sigma
+            const putPrice = blackScholesPut(underlyingPrice, element.strikePrice, T, 0.065, 0.2); // Using a default sigma
 
-            try {
-                const callIV = impliedVolatility(underlyingPrice, element.strikePrice, T, 0.065, callPrice);
-                const putIV = impliedVolatility(underlyingPrice, element.strikePrice, T, 0.065, putPrice);
-                element.CE.impliedVolatility = callIV;
-                element.PE.impliedVolatility = putIV;
-            } catch (error) {
-                console.warn(`Error calculating implied volatility for strike ${element.strikePrice}: ${error.message}`);
-                element.CE.impliedVolatility = 0.2; // Fallback
-                element.PE.impliedVolatility = 0.2; // Fallback
-            }
+            const callIV = impliedVolatility(underlyingPrice, element.strikePrice, T, 0.065, callPrice);
+            const putIV = impliedVolatility(underlyingPrice, element.strikePrice, T, 0.065, putPrice);
 
-            const { delta: deltaCall, theta: thetaCall } = optionGreeks(underlyingPrice, element.strikePrice, T, 0.065, element.CE.impliedVolatility);
-            const { delta: deltaPut, theta: thetaPut } = optionGreeks(underlyingPrice, element.strikePrice, T, 0.065, element.PE.impliedVolatility);
+            const { delta: deltaCall, theta: thetaCall } = optionGreeks(
+                underlyingPrice,
+                element.strikePrice,
+                T,
+                0.065,
+                callIV
+            );
+
+            const { delta: deltaPut, theta: thetaPut } = optionGreeks(
+                underlyingPrice,
+                element.strikePrice,
+                T,
+                0.065,
+                putIV
+            );
 
             element.CE.delta = deltaCall;
             element.CE.theta = thetaCall;
             element.PE.delta = deltaPut;
             element.PE.theta = thetaPut;
+            element.CE.impliedVolatility = callIV; // Store call IV
+            element.PE.impliedVolatility = putIV;   // Store put IV
         });
 
         result.sort((a, b) => b.strikePrice - a.strikePrice);
@@ -105,22 +112,18 @@ function impliedVolatility(S, K, T, r, marketPrice) {
         const vega = blackScholesVega(S, K, T, r, sigma);
         const diff = marketPrice - price;
 
-        if (vega <= 0) {
-            console.warn(`Vega is non-positive at iteration ${i}. Current sigma: ${sigma}`);
-            throw new Error(`Cannot calculate implied volatility. Last sigma: ${sigma}`);
-        }
-
-        sigma += diff / vega;
+        console.log(`Iteration ${i}: sigma = ${sigma}, price = ${price}, marketPrice = ${marketPrice}, diff = ${diff}, vega = ${vega}`);
 
         if (Math.abs(diff) < tolerance) {
             return sigma; // Found the implied volatility
         }
 
-        // Prevent sigma from diverging too much
-        if (sigma < 0 || sigma > 1) {
-            console.warn(`Sigma out of bounds at iteration ${i}. Last sigma: ${sigma}`);
-            throw new Error(`Implied volatility not found within max iterations. Last sigma: ${sigma}`);
+        if (vega <= 0) {
+            console.warn(`Vega is non-positive at iteration ${i}. Current sigma: ${sigma}`);
+            break; // Vega is non-positive, cannot continue
         }
+
+        sigma += diff / vega; // Newton-Raphson update
     }
 
     throw new Error(`Implied volatility not found within max iterations. Last sigma: ${sigma}`);
