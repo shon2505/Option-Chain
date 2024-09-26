@@ -43,7 +43,7 @@ app.get('/api/v1/optionChain', authenticateToken, async (req, res) => {
                 const strikePrice = element.strikePrice;
 
                 if (T <= 0 || underlyingPrice <= 0 || strikePrice <= 0) {
-                    console.warn(`Invalid parameters: T = ${T}, Underlying Price = ${underlyingPrice}, Strike Price = ${strikePrice}`);
+                    // console.warn(`Invalid parameters: T = ${T}, Underlying Price = ${underlyingPrice}, Strike Price = ${strikePrice}`);
                     element.CE.impliedVolatility = null;
                     element.PE.impliedVolatility = null;
                     return;

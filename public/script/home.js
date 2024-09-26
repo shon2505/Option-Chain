@@ -105,7 +105,6 @@ function populateTable(data) {
         return 0;  // Default if there's no CE data
     });
 
-    // Variables to store the highest and second-highest values
     let highestCallOI = 0, secondHighestCallOI = 0;
     let highestCallOIChange = 0, secondHighestCallOIChange = 0;
     let highestCallVolume = 0, secondHighestCallVolume = 0;
@@ -117,7 +116,7 @@ function populateTable(data) {
     // First pass: Find the highest and second-highest values for Call (CE) and Put (PE)
     data.forEach(entry => {
         if (entry.CE) {
-            // Find highest and second-highest for Call OI
+            // Track highest and second-highest Call OI
             if (entry.CE.openInterest > highestCallOI) {
                 secondHighestCallOI = highestCallOI;
                 highestCallOI = entry.CE.openInterest;
@@ -125,7 +124,7 @@ function populateTable(data) {
                 secondHighestCallOI = entry.CE.openInterest;
             }
 
-            // Find highest and second-highest for Call OI Change
+            // Track highest and second-highest Call OI Change
             if (entry.CE.changeinOpenInterest > highestCallOIChange) {
                 secondHighestCallOIChange = highestCallOIChange;
                 highestCallOIChange = entry.CE.changeinOpenInterest;
@@ -133,7 +132,7 @@ function populateTable(data) {
                 secondHighestCallOIChange = entry.CE.changeinOpenInterest;
             }
 
-            // Find highest and second-highest for Call Volume
+            // Track highest and second-highest Call Volume
             if (entry.CE.totalTradedVolume > highestCallVolume) {
                 secondHighestCallVolume = highestCallVolume;
                 highestCallVolume = entry.CE.totalTradedVolume;
@@ -145,7 +144,7 @@ function populateTable(data) {
         }
 
         if (entry.PE) {
-            // Find highest and second-highest for Put OI
+            // Track highest and second-highest Put OI
             if (entry.PE.openInterest > highestPutOI) {
                 secondHighestPutOI = highestPutOI;
                 highestPutOI = entry.PE.openInterest;
@@ -153,7 +152,7 @@ function populateTable(data) {
                 secondHighestPutOI = entry.PE.openInterest;
             }
 
-            // Find highest and second-highest for Put OI Change
+            // Track highest and second-highest Put OI Change
             if (entry.PE.changeinOpenInterest > highestPutOIChange) {
                 secondHighestPutOIChange = highestPutOIChange;
                 highestPutOIChange = entry.PE.changeinOpenInterest;
@@ -161,7 +160,7 @@ function populateTable(data) {
                 secondHighestPutOIChange = entry.PE.changeinOpenInterest;
             }
 
-            // Find highest and second-highest for Put Volume
+            // Track highest and second-highest Put Volume
             if (entry.PE.totalTradedVolume > highestPutVolume) {
                 secondHighestPutVolume = highestPutVolume;
                 highestPutVolume = entry.PE.totalTradedVolume;
@@ -171,161 +170,175 @@ function populateTable(data) {
         }
     });
 
-    // Helper function to create styled cells with value and percentage, text color, and highlighting
-    function createStyledCell(mainValue, isHighlighted, isSecondHighest, bgColor = '', fontColor = 'black', percentage = null) {
+    // Helper function to create styled cells with two values
+    function createStyledCell(mainValue, secondaryValue, isHighlighted, isSecondHighest, bgColor = '', fontColor = 'black', isNegative = false) {
         const td = document.createElement('td');
-        td.style.fontSize = '12px'; // Reduce font size to fit on the screen
+        td.style.fontSize = '12px'; // Adjust font size globally
 
-        // Create a div for the value
         const valueDiv = document.createElement('div');
         valueDiv.textContent = mainValue || '-';
+        valueDiv.style.fontWeight = 'bold'; 
+        td.appendChild(valueDiv);
 
-        // Create a div for the percentage below the value
-        if (percentage !== null) {
-            const percentageDiv = document.createElement('div');
-            percentageDiv.textContent = `(${percentage.toFixed(2)}%)`;
-            percentageDiv.style.fontSize = 'smaller';
-            td.appendChild(percentageDiv); // Append the percentage below the main value
+        if (secondaryValue !== null) {
+            const secondaryDiv = document.createElement('div');
+            secondaryDiv.textContent = `(${secondaryValue})`;
+            secondaryDiv.style.fontSize = 'smaller';
+            secondaryDiv.style.marginTop = '4px'; 
+            td.appendChild(secondaryDiv);
         }
 
-        td.appendChild(valueDiv); // Append value first
-
-        // Apply styling for the highest and second-highest values
-        if (isHighlighted) {
+        if (isNegative) {
+            td.style.color = 'brown';
+            td.style.fontWeight = 'bold';
+        } else if (isHighlighted) {
             td.style.backgroundColor = bgColor;
             td.style.color = fontColor;
             td.style.fontWeight = 'bold';
         } else if (isSecondHighest) {
-            td.style.backgroundColor = '#ffff80'; // Light yellow for second highest
-            td.style.color = '#ff0066'; // Red text for second highest
+            td.style.backgroundColor = '#ffff80';
+            td.style.color = '#ff0066';
             td.style.fontWeight = 'bold';
         }
 
         return td;
     }
 
-    // Second pass: Create rows and apply styles based on the highest and second-highest values
-    let i = 0;
-    data.forEach(entry => {
-        i++;
+    // Second pass: Create rows and insert the Spot Price header after the 10th row
+    data.forEach((entry, i) => {
         const tr = document.createElement('tr');
 
-        // Call (CE) Theta and Delta
-        tr.appendChild(createStyledCell(formatToTwoDecimal(entry.CE?.theta), false, false)); // Call Theta
-        tr.appendChild(createStyledCell(formatToTwoDecimal(entry.CE?.delta), false, false)); // Call Delta
+        function calculatePercentage(value, maxValue) {
+            return ((value / maxValue) * 100).toFixed(2);
+        }
 
-        // Call (CE) Change in Open Interest
+        // Call Theta
+        tr.appendChild(createCell(formatToTwoDecimal(entry.CE?.theta))); 
+
+        tr.appendChild(createStyledCell(
+            formatToTwoDecimal(entry.CE?.impliedVolatility), 
+            formatToTwoDecimal(entry.CE?.delta),
+            false, 
+            false 
+        ));
+
         tr.appendChild(createStyledCell(
             Math.round(entry.CE?.changeinOpenInterest),
+            `${calculatePercentage(entry.CE?.changeinOpenInterest, highestCallOIChange)}%`,
             entry.CE?.changeinOpenInterest === highestCallOIChange,
             entry.CE?.changeinOpenInterest === secondHighestCallOIChange,
-            '#ff0066', // Red background for highest
-            entry.CE?.changeinOpenInterest < 0 ? 'brown' : 'yellow', // Brown text for negative values
-            (entry.CE?.changeinOpenInterest / highestCallOIChange) * 100 // Percentage for OI change
+            '#ff0066', 
+            entry.CE?.changeinOpenInterest < 0 ? 'brown' : 'yellow',
+            entry.CE?.changeinOpenInterest < 0  // Check if the value is negative
         ));
 
-        // Call (CE) Open Interest
         tr.appendChild(createStyledCell(
             entry.CE?.openInterest,
+            `${calculatePercentage(entry.CE?.openInterest, highestCallOI)}%`,
             entry.CE?.openInterest === highestCallOI,
             entry.CE?.openInterest === secondHighestCallOI,
-            '#ff0066', // Red background for highest
-            'yellow', // Yellow text for highest
-            (entry.CE?.openInterest / highestCallOI) * 100 // Percentage for OI
+            '#ff0066', 
+            'yellow' 
         ));
 
-        // Call (CE) Volume
         tr.appendChild(createStyledCell(
             entry.CE?.totalTradedVolume,
+            `${calculatePercentage(entry.CE?.totalTradedVolume, highestCallVolume)}%`,
             entry.CE?.totalTradedVolume === highestCallVolume,
             entry.CE?.totalTradedVolume === secondHighestCallVolume,
-            '#ff0066', // Red background for highest
-            'yellow', // Yellow text for highest
-            (entry.CE?.totalTradedVolume / highestCallVolume) * 100 // Percentage for volume
+            '#ff0066', 
+            'yellow' 
         ));
 
-        // Call (CE) IV, Last Price, and Price Change with color coding for price change
-        tr.appendChild(createStyledCell(formatToTwoDecimal(entry.CE?.impliedVolatility), false, false)); // Call IV
-        tr.appendChild(createStyledCell(formatToTwoDecimal(entry.CE?.lastPrice), false, false)); // Call Last Price
         tr.appendChild(createStyledCell(
+            formatToTwoDecimal(entry.CE?.lastPrice), 
             formatToTwoDecimal(entry.CE?.change),
-            false, false,
-            '',
-            entry.CE?.change > 0 ? 'green' : 'brown' // Green for positive, brown for negative price change
-        )); // Call Price Change
-        tr.appendChild(createStyledCell(entry.CE?.reverse, false, false));
-        // Strike Price (shared between CE and PE)
-        tr.appendChild(createStyledCell(entry.CE?.strikePrice, false, false)); // Strike Price
-        tr.appendChild(createStyledCell(entry.PE?.reverse, false, false));
-        // Put (PE) Price Change, Last Price, IV
-        tr.appendChild(createStyledCell(
-            formatToTwoDecimal(entry.PE?.change),
-            false, false,
-            '',
-            entry.PE?.change > 0 ? 'green' : 'brown' // Green for positive, brown for negative price change
-        )); // Put Price Change
-        tr.appendChild(createStyledCell(formatToTwoDecimal(entry.PE?.lastPrice), false, false)); // Put Last Price
-        tr.appendChild(createStyledCell(formatToTwoDecimal(entry.PE?.impliedVolatility), false, false)); // Put IV
+            false, 
+            false 
+        ));
 
-        // Put (PE) Volume
+        tr.appendChild(createCell(0)); 
+        tr.appendChild(createCell(entry.CE?.strikePrice)); 
+
+        tr.appendChild(createCell(0)); 
+
+        tr.appendChild(createStyledCell(
+            formatToTwoDecimal(entry.PE?.lastPrice), 
+            formatToTwoDecimal(entry.PE?.change),
+            false, 
+            false 
+        ));
+
         tr.appendChild(createStyledCell(
             entry.PE?.totalTradedVolume,
+            `${calculatePercentage(entry.PE?.totalTradedVolume, highestPutVolume)}%`,
             entry.PE?.totalTradedVolume === highestPutVolume,
             entry.PE?.totalTradedVolume === secondHighestPutVolume,
-            '#00cc00', // Green background for highest
-            'yellow', // Yellow text for highest
-            (entry.PE?.totalTradedVolume / highestPutVolume) * 100 // Percentage for volume
+            '#00cc00', 
+            'yellow' 
         ));
 
-        // Put (PE) Open Interest
         tr.appendChild(createStyledCell(
             entry.PE?.openInterest,
+            `${calculatePercentage(entry.PE?.openInterest, highestPutOI)}%`,
             entry.PE?.openInterest === highestPutOI,
             entry.PE?.openInterest === secondHighestPutOI,
-            '#00cc00', // Green background for highest
-            'yellow', // Yellow text for highest
-            (entry.PE?.openInterest / highestPutOI) * 100 // Percentage for OI
+            '#00cc00', 
+            'yellow' 
         ));
 
-        // Put (PE) Change in Open Interest
         tr.appendChild(createStyledCell(
             Math.round(entry.PE?.changeinOpenInterest),
+            `${calculatePercentage(entry.PE?.changeinOpenInterest, highestPutOIChange)}%`,
             entry.PE?.changeinOpenInterest === highestPutOIChange,
             entry.PE?.changeinOpenInterest === secondHighestPutOIChange,
-            '#00cc00', // Green background for highest
-            entry.PE?.changeinOpenInterest < 0 ? 'brown' : 'yellow', // Brown text for negative values
-            (entry.PE?.changeinOpenInterest / highestPutOIChange) * 100 // Percentage for OI change
+            '#00cc00', 
+            entry.PE?.changeinOpenInterest < 0 ? 'brown' : 'yellow',
+            entry.PE?.changeinOpenInterest < 0  // Check if the value is negative
         ));
 
-        // Put (PE) Delta and Theta
-        tr.appendChild(createStyledCell(formatToTwoDecimal(entry.PE?.delta), false, false)); // Put Delta
-        tr.appendChild(createStyledCell(formatToTwoDecimal(entry.PE?.theta), false, false)); // Put Theta
+        tr.appendChild(createStyledCell(
+            formatToTwoDecimal(entry.PE?.impliedVolatility), 
+            formatToTwoDecimal(entry.PE?.delta),
+            false, 
+            false 
+        ));
 
-        // Append the row to the table
-        tbody.appendChild(tr);
+        tr.appendChild(createCell(formatToTwoDecimal(entry.PE?.theta))); 
+
+        tbody.appendChild(tr); 
 
         // Insert the Spot Price header row after the 10th entry
-        if (i === 10) {
+        if (i === 9) {
             const headerRow = document.createElement('tr');
             const ceHeader = document.createElement('th');
-            ceHeader.colSpan = 9;
+            ceHeader.colSpan = 7;
             ceHeader.textContent = 'CE';
 
             const spotPriceHeader = document.createElement('th');
             spotPriceHeader.textContent = `${spotPrice || 'N/A'}`;
 
             const peHeader = document.createElement('th');
-            peHeader.colSpan = 9;
+            peHeader.colSpan = 7;
             peHeader.textContent = 'PE';
 
             headerRow.appendChild(ceHeader);
-            headerRow.appendChild(spotPriceHeader); // Display the Spot Price in the center
+            headerRow.appendChild(spotPriceHeader); 
             headerRow.appendChild(peHeader);
 
             tbody.appendChild(headerRow);
         }
     });
 }
+
+
+
+
+
+
+
+
+
 
 // Helper functions
 function createCell(content) {
