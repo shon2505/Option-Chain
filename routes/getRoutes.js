@@ -75,6 +75,7 @@ app.get('/api/v1/optionChain', authenticateToken, async (req, res) => {
                 element.PE.theta = thetaPut;
                 element.CE.impliedVolatility = callIV; // Store calculated IV for call
                 element.PE.impliedVolatility = putIV;  // Store calculated IV for put
+                
             } catch (error) {
                 console.error(`Error calculating implied volatility for strike ${element.strikePrice}: ${error.message}`);
                 element.CE.impliedVolatility = null;
