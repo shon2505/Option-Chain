@@ -253,10 +253,10 @@ function populateTable(data) {
             '',
             entry.CE?.change > 0 ? 'green' : 'brown' // Green for positive, brown for negative price change
         )); // Call Price Change
-
+        tr.appendChild(createStyledCell(entry.CE?.reverse, false, false));
         // Strike Price (shared between CE and PE)
         tr.appendChild(createStyledCell(entry.CE?.strikePrice, false, false)); // Strike Price
-
+        tr.appendChild(createStyledCell(entry.PE?.reverse, false, false));
         // Put (PE) Price Change, Last Price, IV
         tr.appendChild(createStyledCell(
             formatToTwoDecimal(entry.PE?.change),
@@ -308,14 +308,14 @@ function populateTable(data) {
         if (i === 10) {
             const headerRow = document.createElement('tr');
             const ceHeader = document.createElement('th');
-            ceHeader.colSpan = 8;
+            ceHeader.colSpan = 9;
             ceHeader.textContent = 'CE';
 
             const spotPriceHeader = document.createElement('th');
             spotPriceHeader.textContent = `${spotPrice || 'N/A'}`;
 
             const peHeader = document.createElement('th');
-            peHeader.colSpan = 8;
+            peHeader.colSpan = 9;
             peHeader.textContent = 'PE';
 
             headerRow.appendChild(ceHeader);
