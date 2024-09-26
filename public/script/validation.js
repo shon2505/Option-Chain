@@ -1,5 +1,3 @@
-// Validation for Login and Signup Forms
-
 // Function to show error messages
 function showError(element, message) {
     const errorElement = document.getElementById(element + 'Error');
@@ -23,38 +21,6 @@ function validateEmail(email) {
 function validateMobile(mobile) {
     const mobileRegex = /^[0-9]{10}$/;
     return mobileRegex.test(mobile);
-}
-
-// Validation for Login Form
-function validateLoginForm(e) {
-    let valid = true;
-
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-
-    // Reset error visibility
-    hideError('username');
-    hideError('password');
-
-    // Validate username
-    if (!username) {
-        showError('username', 'Username is required');
-        valid = false;
-    }
-
-    // Validate password
-    if (!password) {
-        showError('password', 'Password is required');
-        valid = false;
-    } else if (password.length < 6) {
-        showError('password', 'Password must be at least 6 characters');
-        valid = false;
-    }
-
-    // Prevent form submission if invalid
-    if (!valid) {
-        e.preventDefault();
-    }
 }
 
 // Validation for Signup Form
@@ -120,8 +86,7 @@ function validateSignupForm(e) {
     }
 }
 
-// Attach event listeners to forms
-document.getElementById('loginForm')?.addEventListener('submit', validateLoginForm);
+// Attach event listener to the signup form
 document.getElementById('signupForm')?.addEventListener('submit', validateSignupForm);
 
 // Dynamic validation for signup form
@@ -133,14 +98,6 @@ document.getElementById('email')?.addEventListener('input', () => {
 });
 document.getElementById('mobile')?.addEventListener('input', () => {  // Mobile input event
     hideError('mobile');
-});
-document.getElementById('password')?.addEventListener('input', () => {
-    hideError('password');
-});
-
-// Dynamic validation for login form
-document.getElementById('username')?.addEventListener('input', () => {
-    hideError('username');
 });
 document.getElementById('password')?.addEventListener('input', () => {
     hideError('password');
