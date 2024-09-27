@@ -4,15 +4,29 @@ const path = require('path');
 const axios = require('axios');
 const authenticateToken = require('./../middleware/authenticateToken');
 const math = require('mathjs');
-const https = require('https');
-const agent = new https.Agent({ rejectUnauthorized: false });
+// const https = require('https');
 
+
+// const agent = new https.Agent({ rejectUnauthorized: false });
+
+
+// const url = 'https://cors-anywhere.herokuapp.com/https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY';
+
+// const url = 'https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY';
+// const headers = {
+//     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'
+// };
 
 
 const url = 'https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY';
 const headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Referer': 'https://www.nseindia.com/option-chain',
+    'Accept': 'application/json, text/plain, */*'
 };
+
+
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'page', 'home.html'));
@@ -30,7 +44,7 @@ app.get('/signup', (req, res) => {
 app.get('/api/v1/optionChain', authenticateToken, async (req, res) => {
     try {
         // const response = await axios.get(url, { headers: headers, timeout: 10000 });
-        const response = await axios.get(url, { headers: headers, timeout: 30000, httpsAgent: agent }); // temp change 
+        const response = await axios.get(url, { headers: headers, timeout: 30000 }); // temp change 
 
         // 
         const jsonObject = response.data.filtered.data;
