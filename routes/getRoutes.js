@@ -4,6 +4,10 @@ const path = require('path');
 const axios = require('axios');
 const authenticateToken = require('./../middleware/authenticateToken');
 const math = require('mathjs');
+const https = require('https');
+const agent = new https.Agent({ rejectUnauthorized: false });
+
+
 
 const url = 'https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY';
 const headers = {
@@ -26,6 +30,7 @@ app.get('/signup', (req, res) => {
 app.get('/api/v1/optionChain', authenticateToken, async (req, res) => {
     try {
         const response = await axios.get(url, { headers: headers, timeout: 10000 });
+        // const response = await axios.get(url, { headers: headers, timeout: 30000, httpsAgent: agent });
         const jsonObject = response.data.filtered.data;
 
         const underlyingPrice = jsonObject[0].PE.underlyingValue || jsonObject[0].CE.underlyingValue;
@@ -75,7 +80,7 @@ app.get('/api/v1/optionChain', authenticateToken, async (req, res) => {
                 element.PE.theta = thetaPut;
                 element.CE.impliedVolatility = callIV; // Store calculated IV for call
                 element.PE.impliedVolatility = putIV;  // Store calculated IV for put
-                
+
             } catch (error) {
                 console.error(`Error calculating implied volatility for strike ${element.strikePrice}: ${error.message}`);
                 element.CE.impliedVolatility = null;
