@@ -29,8 +29,10 @@ app.get('/signup', (req, res) => {
 // Example usage inside your main option chain processing code
 app.get('/api/v1/optionChain', authenticateToken, async (req, res) => {
     try {
-        const response = await axios.get(url, { headers: headers, timeout: 10000 });
-        // const response = await axios.get(url, { headers: headers, timeout: 30000, httpsAgent: agent });
+        // const response = await axios.get(url, { headers: headers, timeout: 10000 });
+        const response = await axios.get(url, { headers: headers, timeout: 30000, httpsAgent: agent }); // temp change 
+
+        // 
         const jsonObject = response.data.filtered.data;
 
         const underlyingPrice = jsonObject[0].PE.underlyingValue || jsonObject[0].CE.underlyingValue;
