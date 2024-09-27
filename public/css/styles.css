@@ -132,3 +132,9 @@ th, td {
         transform: translateY(0);
     }
 }
+.light-green {
+    background-color: rgb(170, 250, 170);
+}
+.light-red {
+    background-color: rgb(238, 174, 174);
+}
