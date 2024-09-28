@@ -4,30 +4,14 @@ const path = require('path');
 const axios = require('axios');
 const authenticateToken = require('./../middleware/authenticateToken');
 const math = require('mathjs');
-// const https = require('https');
-
-
-// const agent = new https.Agent({ rejectUnauthorized: false });
-
-
-// const url = 'https://cors-anywhere.herokuapp.com/https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY';
-
-// const url = 'https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY';
-// const headers = {
-//     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'
-// };
-
+const moment = require('moment');
 
 const url = 'https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY';
 const headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
-    'Accept-Language': 'en-US,en;q=0.9',
-    'Referer': 'https://www.nseindia.com/option-chain',
-    'Accept': 'application/json, text/plain, */*'
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'
 };
 
-
-
+// Serve static pages
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'page', 'home.html'));
 });
@@ -40,68 +24,48 @@ app.get('/signup', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'page', 'signup.html'));
 });
 
-// Example usage inside your main option chain processing code
+// Endpoint to get option chain data
 app.get('/api/v1/optionChain', authenticateToken, async (req, res) => {
     try {
-        // const response = await axios.get(url, { headers: headers, timeout: 10000 });
-        const response = await axios.get(url, { headers: headers, timeout: 30000 }); // temp change 
-
-        // 
+        const response = await axios.get(url, { headers: headers, timeout: 30000 });
         const jsonObject = response.data.filtered.data;
 
-        const underlyingPrice = jsonObject[0].PE.underlyingValue || jsonObject[0].CE.underlyingValue;
-        const closestIndex = jsonObject.reduce((prevIndex, current, index) => {
-            return Math.abs(current.strikePrice - underlyingPrice) < Math.abs(jsonObject[prevIndex].strikePrice - underlyingPrice) ? index : prevIndex;
-        }, 0);
+        let underlyingPrice = jsonObject[0].PE.underlyingValue || jsonObject[0].CE.underlyingValue;
 
-        const startIndex = Math.max(0, closestIndex - 10);
-        const endIndex = Math.min(jsonObject.length, closestIndex + 11);
-        const result = jsonObject.slice(startIndex, endIndex);
+        let closestIndex = 0;
+        for (let i = 1; i < jsonObject.length; i++) {
+            if (Math.abs(jsonObject[i].strikePrice - underlyingPrice) < Math.abs(jsonObject[closestIndex].strikePrice - underlyingPrice)) {
+                closestIndex = i;
+            }
+        }
+
+        let startIndex = Math.max(0, closestIndex - 10);
+        let endIndex = Math.min(jsonObject.length, closestIndex + 10);
+        let result = jsonObject.slice(startIndex, endIndex + 1);
 
         result.forEach(element => {
-            try {
-                const T = calculateTimeToExpiration(element.expiryDate); // Calculate time to expiration
-                const strikePrice = element.strikePrice;
+            const impliedVolatilityCE = newtonRaphsonIV(underlyingPrice, element.strikePrice, element.expiryDate, element.CE.lastPrice);
+            const impliedVolatilityPE = newtonRaphsonIV(underlyingPrice, element.strikePrice, element.expiryDate, element.PE.lastPrice);
 
-                if (T <= 0 || underlyingPrice <= 0 || strikePrice <= 0) {
-                    // console.warn(`Invalid parameters: T = ${T}, Underlying Price = ${underlyingPrice}, Strike Price = ${strikePrice}`);
-                    element.CE.impliedVolatility = null;
-                    element.PE.impliedVolatility = null;
-                    return;
-                }
+            const today = moment();
+            const expiryDate = moment(element.expiryDate, 'DD-MMM-YYYY');
+            const T = expiryDate.diff(today, 'days') / 365;
+            const r = 0.065;
 
-                // Extract market prices for call and put options
-                const callMarketPrice = element.CE.lastPrice;
-                const putMarketPrice = element.PE.lastPrice;
+            const deltaCE = blackScholesDelta(underlyingPrice, element.strikePrice, T, r, impliedVolatilityCE);
+            const deltaPE = blackScholesDelta(underlyingPrice, element.strikePrice, T, r, impliedVolatilityPE);
 
-                if (callMarketPrice <= 0 || putMarketPrice <= 0) {
-                    console.warn(`Invalid market price for strike ${strikePrice}`);
-                    element.CE.impliedVolatility = null;
-                    element.PE.impliedVolatility = null;
-                    return;
-                }
+            const thetaCE = blackScholesTheta(underlyingPrice, element.strikePrice, T, r, impliedVolatilityCE);
+            const thetaPE = blackScholesTheta(underlyingPrice, element.strikePrice, T, r, impliedVolatilityPE);
 
-                // Calculate implied volatility for call and put options
-                const callIV = impliedVolatility(underlyingPrice, strikePrice, T, 0.065, callMarketPrice);
-                const putIV = impliedVolatility(underlyingPrice, strikePrice, T, 0.065, putMarketPrice);
+            element.CE.impliedVolatilityCE = impliedVolatilityCE;
+            element.PE.impliedVolatilityPE = impliedVolatilityPE;
 
-                // Calculate Greeks (delta, theta) for call and put options using the calculated IV
-                const { delta: deltaCall, theta: thetaCall } = optionGreeks(underlyingPrice, strikePrice, T, 0.065, callIV);
-                const { delta: deltaPut, theta: thetaPut } = optionGreeks(underlyingPrice, strikePrice, T, 0.065, putIV);
+            element.CE.deltaCE = deltaCE;
+            element.PE.deltaPE = deltaPE;
 
-                // Update the result with calculated values
-                element.CE.delta = deltaCall;
-                element.CE.theta = thetaCall;
-                element.PE.delta = deltaPut;
-                element.PE.theta = thetaPut;
-                element.CE.impliedVolatility = callIV; // Store calculated IV for call
-                element.PE.impliedVolatility = putIV;  // Store calculated IV for put
-
-            } catch (error) {
-                console.error(`Error calculating implied volatility for strike ${element.strikePrice}: ${error.message}`);
-                element.CE.impliedVolatility = null;
-                element.PE.impliedVolatility = null;
-            }
+            element.CE.thetaCE = thetaCE;
+            element.PE.thetaPE = thetaPE;
         });
 
         result.sort((a, b) => b.strikePrice - a.strikePrice);
@@ -112,100 +76,66 @@ app.get('/api/v1/optionChain', authenticateToken, async (req, res) => {
     }
 });
 
-function cnd(x) {
-    return (1.0 + math.erf(x / Math.SQRT2)) / 2.0;
+// Black-Scholes Delta
+function blackScholesDelta(S, K, T, r, sigma) {
+    const d1 = (Math.log(S / K) + (r + (sigma ** 2) / 2) * T) / (sigma * Math.sqrt(T));
+    return cdf(d1);
 }
 
-function blackScholesCall(S, K, T, r, sigma) {
-    const d1 = (Math.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * Math.sqrt(T));
+// Black-Scholes Theta
+function blackScholesTheta(S, K, T, r, sigma) {
+    const d1 = (Math.log(S / K) + (r + (sigma ** 2) / 2) * T) / (sigma * Math.sqrt(T));
     const d2 = d1 - sigma * Math.sqrt(T);
-    return S * cnd(d1) - K * Math.exp(-r * T) * cnd(d2);
+
+    const callTheta = (-S * pdf(d1) * sigma / (2 * Math.sqrt(T)) - r * K * Math.exp(-r * T) * cdf(d2));
+    return callTheta;
 }
 
-function blackScholesPut(S, K, T, r, sigma) {
-    const d1 = (Math.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * Math.sqrt(T));
-    const d2 = d1 - sigma * Math.sqrt(T);
-    return K * Math.exp(-r * T) * cnd(-d2) - S * cnd(-d1);
+// Cumulative distribution function
+function cdf(x) {
+    return (1 + math.erf(x / Math.sqrt(2))) / 2;
 }
 
-// Function to calculate the implied volatility using Newton-Raphson method
-function impliedVolatility(S, K, T, r, marketPrice) {
-    let sigma = 0.2;  // Reasonable starting guess for sigma (20% implied volatility)
-    const MAX_ITERATIONS = 100;
-    const TOLERANCE = 1e-5;  // Small tolerance value for convergence
-    const MAX_SIGMA = 5.0;  // Max allowable sigma (500%)
-    const MIN_SIGMA = 1e-6;  // Small lower bound to avoid zero or negative volatility
-
-    for (let i = 0; i < MAX_ITERATIONS; i++) {
-        const price = blackScholesCall(S, K, T, r, sigma); // Option price using Black-Scholes model
-        const vega = blackScholesVega(S, K, T, r, sigma);  // Option vega (sensitivity to volatility)
-        const diff = price - marketPrice;  // Difference between the calculated price and market price
-
-        // console.log(`Iteration ${i}: sigma = ${sigma}, price = ${price}, marketPrice = ${marketPrice}, diff = ${diff}, vega = ${vega}`);
-
-        // If the difference is within the acceptable tolerance, we consider it converged
-        if (Math.abs(diff) < TOLERANCE) return sigma;
-
-        // If vega is too small (close to 0), we can't continue as division by vega would be unstable
-        if (vega < TOLERANCE) {
-            // console.warn(`Vega is too small at iteration ${i}, sigma = ${sigma}. Cannot continue with volatility calculation.`);
-            break;
-        }
-
-        // Update sigma using the Newton-Raphson method
-        sigma -= diff / vega;
-
-        // Cap sigma within reasonable bounds to avoid runaway values
-        if (sigma > MAX_SIGMA) {
-            // console.warn(`Sigma exceeded max allowable value (${MAX_SIGMA}) at iteration ${i}. Returning max sigma.`);
-            return MAX_SIGMA;
-        }
-
-        if (sigma < MIN_SIGMA) {
-            // console.warn(`Sigma fell below min allowable value (${MIN_SIGMA}) at iteration ${i}. Returning min sigma.`);
-            return MIN_SIGMA;
-        }
-    }
-
-    // If we reach the maximum number of iterations without converging, throw an error or return a default value
-    // console.error(`Failed to converge after ${MAX_ITERATIONS} iterations. Last sigma value: ${sigma}`);
-    return sigma;  // Return the last sigma value (could also return a default value like null)
-}
-
-function blackScholesVega(S, K, T, r, sigma) {
-    const d1 = (Math.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * Math.sqrt(T));
-    return S * normPdf(d1) * Math.sqrt(T);
-}
-
-function normPdf(x) {
+// Probability density function
+function pdf(x) {
     return (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * x * x);
 }
 
-function optionGreeks(S, K, T, r, sigma) {
-    const d1 = (Math.log(S / K) + (r + sigma ** 2 / 2) * T) / (sigma * Math.sqrt(T));
-    const d2 = d1 - sigma * Math.sqrt(T);
+// Newton-Raphson method for implied volatility
+function newtonRaphsonIV(S, K, expiryDateStr, marketPrice, tolerance = 1e-8, maxIterations = 100) {
+    const today = moment();
+    const expiryDate = moment(expiryDateStr, 'DD-MMM-YYYY');
+    const T = expiryDate.diff(today, 'days') / 365;
+    const r = 0.065;
+    let sigma = 0.2;
 
-    const delta = cnd(d1);
-    const theta = (
-        -S * normPdf(d1) * sigma / (2 * Math.sqrt(2 * Math.PI * T))
-        - r * K * Math.exp(-r * T) * cnd(d2)
-    );
+    for (let i = 0; i < maxIterations; i++) {
+        const price = blackScholesCall(S, K, T, r, sigma);
+        const priceDiff = price - marketPrice;
 
-    return { delta, theta };
-}
+        if (Math.abs(priceDiff) < tolerance) {
+            return sigma;
+        }
 
-function calculateTimeToExpiration(expiryDate) {
-    const today = new Date();
-    const expiry = new Date(expiryDate);
-
-    if (isNaN(expiry)) {
-        throw new Error('Invalid expiry date format');
+        const vegaVal = vega(S, K, T, r, sigma);
+        sigma -= priceDiff / vegaVal;
     }
 
-    const diffInMs = expiry - today;
-    const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
-    const T = diffInDays / 365;
-    return T;
+    return null;
+}
+
+// Black-Scholes Call option price
+function blackScholesCall(S, K, T, r, sigma) {
+    const d1 = (Math.log(S / K) + (r + (sigma ** 2) / 2) * T) / (sigma * Math.sqrt(T));
+    const d2 = d1 - sigma * Math.sqrt(T);
+    const callPrice = S * cdf(d1) - K * Math.exp(-r * T) * cdf(d2);
+    return callPrice;
+}
+
+// Vega calculation
+function vega(S, K, T, r, sigma) {
+    const d1 = (Math.log(S / K) + (r + (sigma ** 2) / 2) * T) / (sigma * Math.sqrt(T));
+    return S * Math.sqrt(T) * pdf(d1);
 }
 
 module.exports = app;

@@ -39,8 +39,8 @@ function createRow(ce = {}, pe = {}) {
     }
 
     // Call (CE) columns
-    tr.appendChild(createCell(ce.Theta)); // Call Theta
-    tr.appendChild(createCell(ce.Delta)); // Call Delta
+    tr.appendChild(createCell(ce.tethaCE)); // Call Theta
+    tr.appendChild(createCell(ce.deltaCE)); // Call Delta
     tr.appendChild(createCell(ce.openInterest)); // Call OI
 
     // "Chng in OI" without decimals
@@ -52,7 +52,7 @@ function createRow(ce = {}, pe = {}) {
     tr.appendChild(createCell(ce.totalTradedVolume)); // Call Volume
 
     // IV with 0.00 decimal format
-    tr.appendChild(createCell(formatToTwoDecimal(ce.impliedVolatility))); // Call IV in 0.00 format
+    tr.appendChild(createCell(formatToTwoDecimal(ce.impliedVolatilityCE))); // Call IV in 0.00 format
     tr.appendChild(createCell(formatToTwoDecimal(ce.lastPrice))); // Call LTP in 0.00 format
 
     // Call Change in 0.00 format
@@ -76,7 +76,7 @@ function createRow(ce = {}, pe = {}) {
     tr.appendChild(createCell(formatToTwoDecimal(pe.lastPrice))); // Put LTP in 0.00 format
 
     // Put IV with 0.00 format
-    tr.appendChild(createCell(formatToTwoDecimal(pe.impliedVolatility))); // Put IV in 0.00 format
+    tr.appendChild(createCell(formatToTwoDecimal(pe.impliedVolatilityPE))); // Put IV in 0.00 format
 
     tr.appendChild(createCell(pe.totalTradedVolume)); // Put Volume
 
@@ -87,20 +87,11 @@ function createRow(ce = {}, pe = {}) {
     ));
 
     tr.appendChild(createCell(pe.openInterest)); // Put OI
-    tr.appendChild(createCell(pe.Delta)); // Put Delta
-    tr.appendChild(createCell(pe.Theta)); // Put Theta
+    tr.appendChild(createCell(pe.deltaPE)); // Put Delta
+    tr.appendChild(createCell(pe.tethaPE)); // Put Theta
 
     return tr;
 }
-
-
-
-
-
-
-
-
-
 
 
 

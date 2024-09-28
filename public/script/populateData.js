@@ -225,7 +225,7 @@ function populateTable(data) {
         tbody.appendChild(tr);
 
         // Insert the Spot Price header row after the 10th entry
-        if (i === 9) {
+        if (i === 10) {
             const headerRow = document.createElement('tr');
 
             // Initialize variables for highest and second-highest volumes and OI
@@ -364,7 +364,7 @@ function populateTable(data) {
             // Spot price cell
             const spotPriceCell = document.createElement('td');
             spotPriceCell.textContent = `${spotPrice || 'N/A'}`;
-            spotPriceCell.style.backgroundColor = '#003366';
+            spotPriceCell.style.backgroundColor = '#003366'; // ajinkya
             spotPriceCell.style.color = 'white';
             spotPriceCell.style.textAlign = 'center';
             spotPriceCell.style.fontWeight = 'bold';
@@ -437,7 +437,7 @@ function populateTable(data) {
             for (let colIndex = 0; colIndex < 7; colIndex++) {
                 const cell = row.cells[colIndex];
 
-                if (rowIndex > 10 && colIndex < 7) {
+                if (rowIndex > 11 && colIndex < 7) {
                     cell.classList.add('light-red');
                 }
             }
@@ -447,7 +447,7 @@ function populateTable(data) {
             for (let colIndex = 8; colIndex < 15; colIndex++) {
                 const cell = row.cells[colIndex];
 
-                if (rowIndex >= 0 && rowIndex < 10 && colIndex > 7) {
+                if (rowIndex >= 0 && rowIndex < 11 && colIndex > 7) {
                     cell.classList.add('light-green');
                 }
             }
