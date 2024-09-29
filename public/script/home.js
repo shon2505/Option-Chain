@@ -31,6 +31,8 @@ function formatCell(content) {
 }
 
 function createRow(ce = {}, pe = {}) {
+    console.log(ce);
+    console.log(pe);
     const tr = document.createElement('tr');
 
     // Helper function to format numbers to 0.00 format
@@ -40,6 +42,7 @@ function createRow(ce = {}, pe = {}) {
 
     // Call (CE) columns
     tr.appendChild(createCell(ce.tethaCE)); // Call Theta
+
     tr.appendChild(createCell(ce.deltaCE)); // Call Delta
     tr.appendChild(createCell(ce.openInterest)); // Call OI
 
@@ -61,10 +64,9 @@ function createRow(ce = {}, pe = {}) {
         String(ce.change || '').startsWith('-') ? 'negative' : 'positive'
     ));
 
-
-    // Strike Price (common)
+    tr.appendChild(createCell(ce.ReversalCE));
     tr.appendChild(createCell(ce.strikePrice)); // Strike Price
-
+    tr.appendChild(createCell(pe.ReversalPE));
     // Put (PE) columns in reversed order
 
     // Put Change in 0.00 format

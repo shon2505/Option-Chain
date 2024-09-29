@@ -44,28 +44,34 @@ app.get('/api/v1/optionChain', authenticateToken, async (req, res) => {
         let result = jsonObject.slice(startIndex, endIndex + 1);
 
         result.forEach(element => {
-            const impliedVolatilityCE = newtonRaphsonIV(underlyingPrice, element.strikePrice, element.expiryDate, element.CE.lastPrice);
-            const impliedVolatilityPE = newtonRaphsonIV(underlyingPrice, element.strikePrice, element.expiryDate, element.PE.lastPrice);
-
             const today = moment();
             const expiryDate = moment(element.expiryDate, 'DD-MMM-YYYY');
-            const T = expiryDate.diff(today, 'days') / 365;
+            const TimeToMaturity = ((expiryDate.diff(today, 'days') + 1) / 365);  // Time to expiry calculation with +1 adjustment
             const r = 0.065;
+            const dividendYield = 0; // Example, modify as necessary
 
-            const deltaCE = blackScholesDelta(underlyingPrice, element.strikePrice, T, r, impliedVolatilityCE);
-            const deltaPE = blackScholesDelta(underlyingPrice, element.strikePrice, T, r, impliedVolatilityPE);
+            // Calculate IV for Call and Put using the Newton-Raphson method
+            const IVCall = calculateImpliedVolatility(underlyingPrice, element.strikePrice, element.expiryDate, element.CE.lastPrice, true);
+            const IVPut = calculateImpliedVolatility(underlyingPrice, element.strikePrice, element.expiryDate, element.PE.lastPrice, false);
 
-            const thetaCE = blackScholesTheta(underlyingPrice, element.strikePrice, T, r, impliedVolatilityCE);
-            const thetaPE = blackScholesTheta(underlyingPrice, element.strikePrice, T, r, impliedVolatilityPE);
+            // Use the calculated IV to compute Delta and Theta for Calls and Puts
+            const deltaCE = callDelta(underlyingPrice, element.strikePrice, r, TimeToMaturity, IVCall, dividendYield);
+            const deltaPE = putDelta(underlyingPrice, element.strikePrice, r, TimeToMaturity, IVPut, dividendYield);
 
-            element.CE.impliedVolatilityCE = impliedVolatilityCE;
-            element.PE.impliedVolatilityPE = impliedVolatilityPE;
+            const thetaCE = callTheta(underlyingPrice, element.strikePrice, r, TimeToMaturity, IVCall, dividendYield);
+            const thetaPE = putTheta(underlyingPrice, element.strikePrice, r, TimeToMaturity, IVPut, dividendYield);
 
-            element.CE.deltaCE = deltaCE;
-            element.PE.deltaPE = deltaPE;
+            element.CE.impliedVolatilityCE = IVCall === "-" ? "-" : IVCall.toFixed(4);
+            element.PE.impliedVolatilityPE = IVPut === "-" ? "-" : IVPut.toFixed(4);
 
-            element.CE.thetaCE = thetaCE;
-            element.PE.thetaPE = thetaPE;
+            element.CE.deltaCE = deltaCE.toFixed(4);
+            element.PE.deltaPE = deltaPE.toFixed(4);
+
+            element.CE.thetaCE = thetaCE.toFixed(4);
+            element.PE.thetaPE = thetaPE.toFixed(4);
+            const { callReversal, putReversal } = calculateReversal(underlyingPrice, element.strikePrice, IVCall, IVPut, deltaCE, deltaPE, thetaCE, thetaPE);
+            element.CE.ReversalCE = callReversal;
+            element.PE.ReversalPE = putReversal
         });
 
         result.sort((a, b) => b.strikePrice - a.strikePrice);
@@ -76,66 +82,137 @@ app.get('/api/v1/optionChain', authenticateToken, async (req, res) => {
     }
 });
 
-// Black-Scholes Delta
-function blackScholesDelta(S, K, T, r, sigma) {
-    const d1 = (Math.log(S / K) + (r + (sigma ** 2) / 2) * T) / (sigma * Math.sqrt(T));
-    return cdf(d1);
+// Refined Newton-Raphson method for implied volatility
+function calculateImpliedVolatility(SpotPrice, StrikePrice, expiryDateStr, OptionPrice, IsCall, tolerance = 0.0001, maxIterations = 100) {
+    const today = moment();
+    const expiryDate = moment(expiryDateStr, 'DD-MMM-YYYY');
+    const TimeToMaturity = (expiryDate.diff(today, 'days') + 1) / 365;  // Adjusted time to expiry
+    const RiskFreeRate = 0.065;  // Risk-Free Rate
+
+    let IVGuess = 0.1;  // Initial guess for IV, reduced to prevent overshooting
+    const MaxIV = 2;    // Adjust the maximum IV to limit runaway values
+
+    for (let iteration = 0; iteration < maxIterations; iteration++) {
+        // Calculate option price with the current guess of IV
+        const OptionModelPrice = blackScholesPrice(SpotPrice, StrikePrice, TimeToMaturity, IVGuess, RiskFreeRate, IsCall);
+
+        // Calculate Vega
+        const Vega = optionVega(SpotPrice, StrikePrice, TimeToMaturity, IVGuess, RiskFreeRate);
+
+        // If Vega is too small, we avoid adjusting the IV too much
+        if (Vega < 1e-8) {
+            return IVGuess;  // Converged to a small value, exit early
+        }
+
+        // Difference between the market price and the model price
+        const PriceDiff = OptionModelPrice - OptionPrice;
+
+        // If the price difference is within tolerance, exit the loop
+        if (Math.abs(PriceDiff) < tolerance) {
+            return IVGuess;  // IV has converged
+        }
+
+        // Update the guess using the Newton-Raphson method
+        IVGuess -= PriceDiff / Vega;
+
+        // Prevent runaway IV values
+        if (IVGuess > MaxIV || IVGuess < 0) {
+            return "-";  // Indicate an invalid IV
+        }
+    }
+
+    return IVGuess;  // Return the final calculated IV
 }
 
-// Black-Scholes Theta
-function blackScholesTheta(S, K, T, r, sigma) {
-    const d1 = (Math.log(S / K) + (r + (sigma ** 2) / 2) * T) / (sigma * Math.sqrt(T));
-    const d2 = d1 - sigma * Math.sqrt(T);
+// Function to calculate the Black-Scholes option price
+function blackScholesPrice(SpotPrice, StrikePrice, TimeToMaturity, Volatility, RiskFreeRate, IsCall) {
+    const d1 = (Math.log(SpotPrice / StrikePrice) + (RiskFreeRate + 0.5 * Math.pow(Volatility, 2)) * TimeToMaturity) / (Volatility * Math.sqrt(TimeToMaturity));
+    const d2 = d1 - Volatility * Math.sqrt(TimeToMaturity);
 
-    const callTheta = (-S * pdf(d1) * sigma / (2 * Math.sqrt(T)) - r * K * Math.exp(-r * T) * cdf(d2));
-    return callTheta;
+    if (IsCall) {
+        return SpotPrice * cdf(d1) - StrikePrice * Math.exp(-RiskFreeRate * TimeToMaturity) * cdf(d2);
+    } else {
+        return StrikePrice * Math.exp(-RiskFreeRate * TimeToMaturity) * cdf(-d2) - SpotPrice * cdf(-d1);
+    }
 }
 
-// Cumulative distribution function
+// Function to calculate the Vega of an option
+function optionVega(SpotPrice, StrikePrice, TimeToMaturity, Volatility, RiskFreeRate) {
+    const d1 = (Math.log(SpotPrice / StrikePrice) + (RiskFreeRate + 0.5 * Math.pow(Volatility, 2)) * TimeToMaturity) / (Volatility * Math.sqrt(TimeToMaturity));
+    return SpotPrice * pdf(d1) * Math.sqrt(TimeToMaturity);
+}
+
+// Call Delta calculation
+function callDelta(SpotPrice, StrikePrice, RiskFreeRate, TimeToMaturity, Volatility, DividendYield = 0) {
+    const d1 = (Math.log(SpotPrice / StrikePrice) + (RiskFreeRate - DividendYield + 0.5 * Math.pow(Volatility, 2)) * TimeToMaturity) / (Volatility * Math.sqrt(TimeToMaturity));
+    return Math.exp(-DividendYield * TimeToMaturity) * cdf(d1);
+}
+
+// Put Delta calculation
+function putDelta(SpotPrice, StrikePrice, RiskFreeRate, TimeToMaturity, Volatility, DividendYield = 0) {
+    return callDelta(SpotPrice, StrikePrice, RiskFreeRate, TimeToMaturity, Volatility, DividendYield) - 1;
+}
+
+// Call Theta calculation
+function callTheta(SpotPrice, StrikePrice, RiskFreeRate, TimeToMaturity, Volatility, DividendYield = 0) {
+    const d1 = (Math.log(SpotPrice / StrikePrice) + (RiskFreeRate - DividendYield + 0.5 * Math.pow(Volatility, 2)) * TimeToMaturity) / (Volatility * Math.sqrt(TimeToMaturity));
+    const d2 = d1 - Volatility * Math.sqrt(TimeToMaturity);
+
+    // Black-Scholes Theta formula
+    const term1 = -(SpotPrice * Math.exp(-DividendYield * TimeToMaturity) * pdf(d1) * Volatility) / (2 * Math.sqrt(TimeToMaturity));
+    const term2 = RiskFreeRate * StrikePrice * Math.exp(-RiskFreeRate * TimeToMaturity) * cdf(d2);
+
+    // Divide by 365 to match the daily Theta output
+    const thetaCall = (term1 - term2) / 365;
+    return thetaCall;
+}
+
+// Put Theta calculation
+function putTheta(SpotPrice, StrikePrice, RiskFreeRate, TimeToMaturity, Volatility, DividendYield = 0) {
+    const d1 = (Math.log(SpotPrice / StrikePrice) + (RiskFreeRate - DividendYield + 0.5 * Math.pow(Volatility, 2)) * TimeToMaturity) / (Volatility * Math.sqrt(TimeToMaturity));
+    const d2 = d1 - Volatility * Math.sqrt(TimeToMaturity);
+
+    // Black-Scholes Theta formula
+    const term1 = -(SpotPrice * Math.exp(-DividendYield * TimeToMaturity) * pdf(d1) * Volatility) / (2 * Math.sqrt(TimeToMaturity));
+    const term2 = RiskFreeRate * StrikePrice * Math.exp(-RiskFreeRate * TimeToMaturity) * cdf(-d2);
+
+    // Divide by 365 to match the daily Theta output
+    const thetaPut = (term1 + term2) / 365;
+    return thetaPut;
+}
+
+// Calculate Call & PUt  Reversal values
+function calculateReversal(spotPrice, strikePrice, callIV, putIV, callDelta, putDelta, callTheta, putTheta) {
+    let callReversal, putReversal;
+
+    // Calculate Call Reversal when Strike Price > Spot Price, otherwise Breakout
+    if (strikePrice > spotPrice) {
+        callReversal = strikePrice + (((callIV + putIV) * 100) * (callDelta - putDelta) + callTheta);
+    } else {
+        callReversal = "Breakout";
+    }
+
+    // Calculate Put Reversal when Strike Price < Spot Price, otherwise Breakdown
+    if (strikePrice < spotPrice) {
+        putReversal = strikePrice + (((callIV + putIV) * 100) * (callDelta - putDelta) + putTheta);
+    } else {
+        putReversal = "Breakdown";
+    }
+
+    return {
+        callReversal,
+        putReversal
+    };
+}
+
+
+// Cumulative distribution function (CDF)
 function cdf(x) {
     return (1 + math.erf(x / Math.sqrt(2))) / 2;
 }
 
-// Probability density function
 function pdf(x) {
     return (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * x * x);
-}
-
-// Newton-Raphson method for implied volatility
-function newtonRaphsonIV(S, K, expiryDateStr, marketPrice, tolerance = 1e-8, maxIterations = 100) {
-    const today = moment();
-    const expiryDate = moment(expiryDateStr, 'DD-MMM-YYYY');
-    const T = expiryDate.diff(today, 'days') / 365;
-    const r = 0.065;
-    let sigma = 0.2;
-
-    for (let i = 0; i < maxIterations; i++) {
-        const price = blackScholesCall(S, K, T, r, sigma);
-        const priceDiff = price - marketPrice;
-
-        if (Math.abs(priceDiff) < tolerance) {
-            return sigma;
-        }
-
-        const vegaVal = vega(S, K, T, r, sigma);
-        sigma -= priceDiff / vegaVal;
-    }
-
-    return null;
-}
-
-// Black-Scholes Call option price
-function blackScholesCall(S, K, T, r, sigma) {
-    const d1 = (Math.log(S / K) + (r + (sigma ** 2) / 2) * T) / (sigma * Math.sqrt(T));
-    const d2 = d1 - sigma * Math.sqrt(T);
-    const callPrice = S * cdf(d1) - K * Math.exp(-r * T) * cdf(d2);
-    return callPrice;
-}
-
-// Vega calculation
-function vega(S, K, T, r, sigma) {
-    const d1 = (Math.log(S / K) + (r + (sigma ** 2) / 2) * T) / (sigma * Math.sqrt(T));
-    return S * Math.sqrt(T) * pdf(d1);
 }
 
 module.exports = app;

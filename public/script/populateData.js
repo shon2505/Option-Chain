@@ -1,22 +1,13 @@
 function populateTable(data) {
+    console.log(data);
     const tbody = document.querySelector('#data-table tbody');
     tbody.innerHTML = '';
 
 
-    data.sort((a, b) => {
-        if (a.CE && b.CE) {
-            return b.CE.strikePrice - a.CE.strikePrice;
-        }
-        return 0;  // Default if there's no CE data
-    });
 
-    let highestCallOI = 0, secondHighestCallOI = 0;
-    let highestCallOIChange = 0, secondHighestCallOIChange = 0;
-    let highestCallVolume = 0, secondHighestCallVolume = 0;
-    let highestPutOI = 0, secondHighestPutOI = 0;
-    let highestPutOIChange = 0, secondHighestPutOIChange = 0;
-    let highestPutVolume = 0, secondHighestPutVolume = 0;
-    let spotPrice = ''; // Store the spot price
+
+    let highestCallOI = 0, secondHighestCallOI = 0, highestCallOIChange = 0, secondHighestCallOIChange = 0, highestCallVolume = 0, secondHighestCallVolume = 0, highestPutOI = 0, secondHighestPutOI = 0, highestPutOIChange = 0, secondHighestPutOIChange = 0, highestPutVolume = 0, secondHighestPutVolume = 0, spotPrice = '';
+
 
     // First pass: Find the highest and second-highest values for Call (CE) and Put (PE)
     data.forEach(entry => {
@@ -76,50 +67,12 @@ function populateTable(data) {
     });
 
     // Helper function to create styled cells with two values
-    function createStyledCell(mainValue, secondaryValue, isHighlighted, isSecondHighest, percentage, bgColor = '', fontColor = 'black', isNegative = false) {
-        const td = document.createElement('td');
-        td.style.fontSize = '13px'; // Adjust font size globally
 
-        const valueDiv = document.createElement('div');
-        valueDiv.textContent = mainValue || '-';
-        valueDiv.style.fontWeight = 'bold';
-        td.appendChild(valueDiv);
-
-        if (secondaryValue !== null) {
-            const secondaryDiv = document.createElement('div');
-            secondaryDiv.textContent = `(${secondaryValue})`;
-            secondaryDiv.style.fontSize = '13px';
-            secondaryDiv.style.marginTop = '4px';
-            td.appendChild(secondaryDiv);
-        }
-
-        if (isNegative) {
-            td.style.color = 'brown';
-            td.style.fontWeight = 'bold';
-        } else if (isHighlighted) {
-            td.style.backgroundColor = bgColor;
-            td.style.color = fontColor;
-            td.style.fontWeight = 'bold';
-        } else if (isSecondHighest && percentage > 75) {
-            // Apply formatting only if the percentage is > 75%
-            td.style.backgroundColor = '#ffff80';
-            td.style.color = '#ff0066';
-            td.style.fontWeight = 'bold';
-        }
-
-        return td;
-    }
-
-    // Helper function to calculate percentage
-    function calculatePercentage(value, maxValue) {
-        return ((value / maxValue) * 100).toFixed(2);
-    }
 
     // Second pass: Create rows and insert the Spot Price header after the 10th row
 
 
-    let rightColor = "light-green";
-    let leftColor = "light-red";
+
     data.forEach((entry, i) => {
         const tr = document.createElement('tr');
 
@@ -224,7 +177,7 @@ function populateTable(data) {
 
         tbody.appendChild(tr);
 
-        // Insert the Spot Price header row after the 10th entry
+
         if (i === 10) {
             const headerRow = document.createElement('tr');
 
@@ -306,18 +259,10 @@ function populateTable(data) {
 
             // Correct layout for Call and Put sections:
 
-            // CE Dummy 1 & 2 (No Logic)
-            const ceCell1_2 = document.createElement('td');
-            ceCell1_2.textContent = `-`;
-            ceCell1_2.colSpan = 2;  // Keeping the combined columns
+            const ceCell1_2 = createTableCell(' ', 3); // Content is a single space
             headerRow.appendChild(ceCell1_2);
 
-            // CE Dummy 3 (No Logic)
-            const ceCell3 = document.createElement('td');
-            ceCell3.textContent = `-`;
-            headerRow.appendChild(ceCell3);
 
-            // CE Dummy 4 (Call OI logic with wide-headed arrows)
             const ceCell4 = document.createElement('td');
             if (secondHighestCallOI > 0.75 * highestCallOI) {
                 if (secondHighestCallOIStrike > highestCallOIStrike) {
@@ -336,7 +281,7 @@ function populateTable(data) {
             }
             headerRow.appendChild(ceCell4);
 
-            // CE Dummy 5 (Call Volume logic with wide-headed arrows)
+
             const ceCell5 = document.createElement('td');
             if (secondHighestCallVolume > 0.75 * highestCallVolume) {
                 if (secondHighestCallVolumeStrike > highestCallVolumeStrike) {
@@ -355,26 +300,25 @@ function populateTable(data) {
             }
             headerRow.appendChild(ceCell5);
 
-            // CE Dummy 6 & 7 (No Logic)
-            const ceCell6_7 = document.createElement('td');
-            ceCell6_7.textContent = `-`;
-            ceCell6_7.colSpan = 2;  // Keeping the combined columns
+            // Creating the CE Dummy 6 & 7 cells 
+            const ceCell6_7 = createTableCell(' ', 2); // Content is a single space and spans 2 columns
             headerRow.appendChild(ceCell6_7);
+
 
             // Spot price cell
             const spotPriceCell = document.createElement('td');
             spotPriceCell.textContent = `${spotPrice || 'N/A'}`;
-            spotPriceCell.style.backgroundColor = '#003366'; // ajinkya
+            spotPriceCell.style.backgroundColor = '#003366';
             spotPriceCell.style.color = 'white';
             spotPriceCell.style.textAlign = 'center';
             spotPriceCell.style.fontWeight = 'bold';
             headerRow.appendChild(spotPriceCell);
 
-            // PE Dummy 1 & 2 (No Logic)
-            const peCell1_2 = document.createElement('td');
-            peCell1_2.textContent = `-`;
-            peCell1_2.colSpan = 2;  // Keeping the combined columns
-            headerRow.appendChild(peCell1_2);
+
+            // Creating the CE Dummy 6 & 7 cells using the utility function
+            const pe12 = createTableCell(' ', 2);
+            headerRow.appendChild(pe12);
+
 
             // PE Dummy 3 (Put Volume logic with wide-headed arrows)
             const peCell3 = document.createElement('td');
@@ -414,44 +358,22 @@ function populateTable(data) {
             }
             headerRow.appendChild(peCell4);
 
-            // PE Dummy 5 (No Logic)
-            const peCell5 = document.createElement('td');
-            peCell5.textContent = `-`;
-            headerRow.appendChild(peCell5);
 
-            // PE Dummy 6 & 7 (No Logic)
-            const peCell6_7 = document.createElement('td');
-            peCell6_7.textContent = `-`;
-            peCell6_7.colSpan = 2;  // Keeping the combined columns
-            headerRow.appendChild(peCell6_7);
 
-            // Append the row to the table body
+            // Creating the CE Dummy 6 & 7 cells using the utility function
+            const ce89 = createTableCell(' ', 3); // Content is a single space and spans 2 columns
+            headerRow.appendChild(ce89);
+
+            headerRow.style.backgroundColor = '#c2ffff'
+
             tbody.appendChild(headerRow);
         }
 
 
 
         const rows = tbody.querySelectorAll('tr');
+        addGreenRed(rows);
 
-        rows.forEach((row, rowIndex) => {
-            for (let colIndex = 0; colIndex < 7; colIndex++) {
-                const cell = row.cells[colIndex];
-
-                if (rowIndex > 11 && colIndex < 7) {
-                    cell.classList.add('light-red');
-                }
-            }
-
-        });
-        rows.forEach((row, rowIndex) => {
-            for (let colIndex = 8; colIndex < 15; colIndex++) {
-                const cell = row.cells[colIndex];
-
-                if (rowIndex >= 0 && rowIndex < 11 && colIndex > 7) {
-                    cell.classList.add('light-green');
-                }
-            }
-        });
 
 
 
@@ -461,3 +383,74 @@ function populateTable(data) {
 
 
 
+
+
+
+function addGreenRed(rows) {
+    rows.forEach((row, rowIndex) => {
+        for (let colIndex = 0; colIndex < row.cells.length; colIndex++) {
+            const cell = row.cells[colIndex];
+            if (rowIndex > 11 && colIndex < 7) {
+                cell.classList.add('light-red');
+            } else if (rowIndex >= 0 && rowIndex < 11 && colIndex > 7) {
+                cell.classList.add('light-green');
+            } else {
+                cell.classList.add('light-white');
+            }
+
+        }
+    });
+}
+
+
+
+
+
+const createTableCell = (content, colSpan = 1, styles = {}) => {
+    const cell = document.createElement('td');
+    cell.textContent = content;
+    cell.colSpan = colSpan;
+
+    // Apply styles if any are provided
+    Object.assign(cell.style, styles);
+
+    return cell;
+};
+function createStyledCell(mainValue, secondaryValue, isHighlighted, isSecondHighest, percentage, bgColor = '', fontColor = 'black', isNegative = false) {
+    const td = document.createElement('td');
+    td.style.fontSize = '13px'; // Adjust font size globally
+
+    const valueDiv = document.createElement('div');
+    valueDiv.textContent = mainValue || '-';
+    valueDiv.style.fontWeight = 'bold';
+    td.appendChild(valueDiv);
+
+    if (secondaryValue !== null) {
+        const secondaryDiv = document.createElement('div');
+        secondaryDiv.textContent = `(${secondaryValue})`;
+        secondaryDiv.style.fontSize = '13px';
+        secondaryDiv.style.marginTop = '4px';
+        td.appendChild(secondaryDiv);
+    }
+
+    if (isNegative) {
+        td.style.color = 'brown';
+        td.style.fontWeight = 'bold';
+    } else if (isHighlighted) {
+        td.style.backgroundColor = bgColor;
+        td.style.color = fontColor;
+        td.style.fontWeight = 'bold';
+    } else if (isSecondHighest && percentage > 75) {
+        // Apply formatting only if the percentage is > 75%
+        td.style.backgroundColor = '#ffff80';
+        td.style.color = '#ff0066';
+        td.style.fontWeight = 'bold';
+    }
+
+    return td;
+}
+
+// Helper function to calculate percentage
+function calculatePercentage(value, maxValue) {
+    return ((value / maxValue) * 100).toFixed(2);
+}
