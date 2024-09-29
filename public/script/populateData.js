@@ -528,9 +528,7 @@ function populateTable(data) {
                 }
             }
         });
-
-
-
+        
 
     });
 }
