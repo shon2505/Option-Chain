@@ -44,7 +44,7 @@ function createRow(ce = {}, pe = {}) {
 
     // "Chng in OI" without decimals
     tr.appendChild(createCell(
-        Math.round(ce.changeinOpenInterest), // Round the Change in OI to nearest integer
+        Math.round(ce.changeinOpenInterest), // Round Change in OI to nearest integer
         String(ce.changeinOpenInterest || '').startsWith('-') ? 'negative' : 'positive'
     ));
 
@@ -63,8 +63,8 @@ function createRow(ce = {}, pe = {}) {
     tr.appendChild(createCell(ce.ReversalCE));
     tr.appendChild(createCell(ce.strikePrice)); // Strike Price
     tr.appendChild(createCell(pe.ReversalPE));
-    // Put (PE) columns in reversed order
 
+    // Put (PE) columns
     // Put Change in 0.00 format
     tr.appendChild(createCell(
         formatToTwoDecimal(pe.change),
@@ -92,23 +92,6 @@ function createRow(ce = {}, pe = {}) {
 }
 
 
-
-
-
-function createCell(content) {
-    const td = document.createElement('td');
-    td.textContent = content || '-';
-    td.style.fontSize = '12px'; // Reduce font size globally
-    return td;
-}
-
-function formatToTwoDecimal(value) {
-    return (parseFloat(value) || 0).toFixed(2);
-}
-
-
-
-
 // Helper functions
 function createCell(content) {
     const td = document.createElement('td');
@@ -117,26 +100,6 @@ function createCell(content) {
     return td;
 }
 
-function formatToTwoDecimal(value) {
-    return (parseFloat(value) || 0).toFixed(2);
-}
-
-
-
-
-// Helper functions
-function createCell(content) {
-    const td = document.createElement('td');
-    td.textContent = content || '-';
-    td.style.fontSize = '12px'; // Reduce font size globally
-    return td;
-}
-
-function formatToTwoDecimal(value) {
-    return (parseFloat(value) || 0).toFixed(2);
-}
-
-
 
 
 // Helper functions
@@ -146,6 +109,7 @@ function createCell(content) {
     return td;
 }
 
+<<<<<<< HEAD
 function formatToTwoDecimal(value) {
     return (parseFloat(value) || 0).toFixed(2);
 }
@@ -156,7 +120,8 @@ function formatToTwoDecimal(value) {
 //     window.location.href = '/login';
 // });
 
+=======
+// Frontend page will be refreshing every 10 seconds for now
+>>>>>>> ee5f996b367085c814f8791c4e0e44125d024dc3
 window.onload = fetchData;
-
-// front end page will be refrshing every 10 second for now 
-setInterval(fetchData, 10000);  
+setInterval(fetchData, 10000);

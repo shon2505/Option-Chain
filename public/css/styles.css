@@ -6,6 +6,11 @@ body {
     background-color: #f4f4f4;
 }
 
+/* //hide logout button */
+#logout-button {
+    display: none;
+}
+
 h1, h2 {
     color: #003366;
 }
