@@ -31,18 +31,14 @@ function formatCell(content) {
 }
 
 function createRow(ce = {}, pe = {}) {
-    console.log(ce);
-    console.log(pe);
     const tr = document.createElement('tr');
 
-    // Helper function to format numbers to 0.00 format
     function formatToTwoDecimal(value) {
         return (parseFloat(value) || 0).toFixed(2);
     }
 
     // Call (CE) columns
     tr.appendChild(createCell(ce.tethaCE)); // Call Theta
-
     tr.appendChild(createCell(ce.deltaCE)); // Call Delta
     tr.appendChild(createCell(ce.openInterest)); // Call OI
 
@@ -155,10 +151,10 @@ function formatToTwoDecimal(value) {
 }
 
 
-document.getElementById('logout-button').addEventListener('click', async () => {
-    await fetch('/logout', { method: 'POST' });
-    window.location.href = '/login';
-});
+// document.getElementById('logout-button').addEventListener('click', async () => {
+//     await fetch('/logout', { method: 'POST' });
+//     window.location.href = '/login';
+// });
 
 window.onload = fetchData;
 
