@@ -69,9 +69,9 @@ app.get('/api/v1/optionChain', authenticateToken, async (req, res) => {
 
             element.CE.thetaCE = thetaCE.toFixed(4);
             element.PE.thetaPE = thetaPE.toFixed(4);
-            const { callReversal, putReversal } = calculateReversal(underlyingPrice, element.strikePrice, IVCall, IVPut, deltaCE, deltaPE, thetaCE, thetaPE);
-            element.CE.ReversalCE = callReversal;
-            element.PE.ReversalPE = putReversal
+
+            element.CE.ReversalCE = calculateReversal(underlyingPrice, element.strikePrice, IVCall, IVPut, deltaCE, deltaPE, thetaCE, thetaPE);
+            element.PE.ReversalPE = calculateReversal(underlyingPrice, element.strikePrice, IVCall, IVPut, deltaCE, deltaPE, thetaCE, thetaPE);
         });
 
         result.sort((a, b) => b.strikePrice - a.strikePrice);
@@ -161,7 +161,7 @@ function callTheta(SpotPrice, StrikePrice, RiskFreeRate, TimeToMaturity, Volatil
     // Black-Scholes Theta formula
     const term1 = -(SpotPrice * Math.exp(-DividendYield * TimeToMaturity) * pdf(d1) * Volatility) / (2 * Math.sqrt(TimeToMaturity));
     const term2 = RiskFreeRate * StrikePrice * Math.exp(-RiskFreeRate * TimeToMaturity) * cdf(d2);
-
+    
     // Divide by 365 to match the daily Theta output
     const thetaCall = (term1 - term2) / 365;
     return thetaCall;
@@ -175,7 +175,7 @@ function putTheta(SpotPrice, StrikePrice, RiskFreeRate, TimeToMaturity, Volatili
     // Black-Scholes Theta formula
     const term1 = -(SpotPrice * Math.exp(-DividendYield * TimeToMaturity) * pdf(d1) * Volatility) / (2 * Math.sqrt(TimeToMaturity));
     const term2 = RiskFreeRate * StrikePrice * Math.exp(-RiskFreeRate * TimeToMaturity) * cdf(-d2);
-
+    
     // Divide by 365 to match the daily Theta output
     const thetaPut = (term1 + term2) / 365;
     return thetaPut;
@@ -211,6 +211,7 @@ function cdf(x) {
     return (1 + math.erf(x / Math.sqrt(2))) / 2;
 }
 
+// Probability density function (PDF)
 function pdf(x) {
     return (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * x * x);
 }
